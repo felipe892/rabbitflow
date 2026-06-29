@@ -1039,19 +1039,28 @@ async function salvarLojaSupabase(dados){
     }
     // Salvar chaveiros — deletar antigos e reinserir
     if(lojaId){
-      await supa.from('chaveiros').delete().eq('loja_id', lojaId);
+      var del = await supa.from('chaveiros').delete().eq('loja_id', lojaId);
+      console.log('Delete chaveiros:', del.error ? 'ERRO: '+del.error.message : 'OK');
       for(var i=0;i<(dados.chaveiros||[]).length;i++){
         var c = dados.chaveiros[i];
         if(!c.nome) continue;
-        var ci = await supa.from('chaveiros').insert({
+        var payload = {
           loja_id: lojaId,
           maker_id: ST_USER.id,
           nome: c.nome,
           qtd_inicial: parseFloat(c.qtd)||0,
           preco: parseFloat(c.preco)||0,
           reposicoes: c.reposicoes||[]
-        }).select('id').single();
-        if(ci.data) c.id = ci.data.id;
+        };
+        console.log('Inserindo chaveiro:', c.nome, 'loja_id:', lojaId);
+        var ci = await supa.from('chaveiros').insert(payload).select('id').single();
+        if(ci.error){
+          console.error('Erro chaveiro '+c.nome+':', ci.error.message, ci.error.details);
+          toast('Erro ao salvar chaveiro: '+ci.error.message);
+        } else {
+          console.log('Chaveiro salvo:', c.nome, ci.data.id);
+          c.id = ci.data.id;
+        }
       }
     }
   } catch(err){
