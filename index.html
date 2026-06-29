@@ -892,6 +892,18 @@ async function fazerLogin(){
     return;
   }
   ST_USER = res.data.user;
+  // Garantir que perfil do maker existe no banco
+  var mkCheck = await supa.from('makers').select('id').eq('id',ST_USER.id).single();
+  console.log('Maker check:', mkCheck.data ? 'existe' : 'nao existe', mkCheck.error ? mkCheck.error.message : '');
+  if(!mkCheck.data){
+    // Perfil não existe — criar agora
+    await supa.from('makers').upsert({
+      id: ST_USER.id,
+      email: ST_USER.email,
+      nome: document.getElementById('login-email').value.split('@')[0],
+      pessoa: ''
+    });
+  }
   await carregarDadosMaker();
   renderHome();
   ir('pg-home');
@@ -940,9 +952,11 @@ async function fazerLogout(){
 
 // ── CARREGAR DADOS DO MAKER DO SUPABASE ──
 async function carregarDadosMaker(){
-  if(!ST_USER)return;
+  if(!ST_USER){console.log('carregarDadosMaker: sem usuario');return;}
+  console.log('Carregando dados para user:', ST_USER.id);
   // Carregar perfil
   var perfil = await supa.from('makers').select('*').eq('id',ST_USER.id).single();
+  console.log('Perfil:', perfil.data ? 'OK nome='+perfil.data.nome : 'ERRO '+( perfil.error ? perfil.error.message : 'null'));
   if(perfil.data){
     ST.makerNome = perfil.data.nome||'';
     ST.makerPessoa = perfil.data.pessoa||'';
@@ -951,6 +965,7 @@ async function carregarDadosMaker(){
   }
   // Carregar lojas com chaveiros
   var lojasRes = await supa.from('lojas').select('*').eq('maker_id',ST_USER.id).order('criado_em');
+  console.log('Lojas:', lojasRes.data ? lojasRes.data.length+' lojas' : 'ERRO '+(lojasRes.error ? lojasRes.error.message : 'null'));
   if(lojasRes.data){
     ST.lojas = [];
     for(var i=0;i<lojasRes.data.length;i++){
