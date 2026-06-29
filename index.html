@@ -990,6 +990,8 @@ async function carregarDadosMaker(){
     for(var i=0;i<lojasRes.data.length;i++){
       var l = lojasRes.data[i];
       var chavRes = await supa.from('chaveiros').select('*').eq('loja_id',l.id).order('criado_em');
+      console.log('Chaveiros da loja '+l.nome+':', chavRes.data ? chavRes.data.length : 'ERRO', chavRes.error ? chavRes.error.message : '');
+      if(chavRes.data) chavRes.data.forEach(function(c){ console.log(' -', c.nome, 'qtd:', c.qtd_inicial, 'preco:', c.preco); });
       var chaveirosMapped = (chavRes.data||[]).map(function(c){
         return {
           id: c.id,
