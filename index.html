@@ -987,6 +987,14 @@ async function carregarDadosMaker(){
         var ch = chaveirosMapped.find(function(c){return c.id===v.chaveiro_id;});
         if(ch) ch.vendas = (ch.vendas||0)+v.qtd_vendida;
       });
+      // Recalcular pecas e aRec
+      var totPecas=0, totRec=0;
+      chaveirosMapped.forEach(function(c){
+        var t=(parseFloat(c.qtd)||0)+(c.reposicoes||[]).reduce(function(a,r){return a+r;},0);
+        var p=parseFloat(c.preco)||0;
+        totPecas+=t;
+        totRec+=t*p*(1-(l.pct||30)/100);
+      });
       ST.lojas.push({
         id: l.id,
         nome: l.nome,
@@ -999,8 +1007,8 @@ async function carregarDadosMaker(){
         logo: l.logo_url||null,
         pct: l.pct||30,
         pago: l.pago||false,
-        pecas: 0,
-        aRec: 0,
+        pecas: totPecas,
+        aRec: totRec,
         chaveiros: chaveirosMapped
       });
     }
