@@ -722,6 +722,27 @@ function setPctBtn(btn,val){
   btn.classList.add('active');updateAllSplits();calcResumo();
 }
 function totalEnviado(c){return(parseFloat(c.qtd)||0)+c.reposicoes.reduce(function(a,r){return a+r;},0);}
+function criarRowExistente(c){
+  var id = c._localId; // usar id local numérico para seletores CSS
+  var list=document.getElementById('chav-list');
+  var row=document.createElement('div');
+  row.className='chav-row'; row.id='chav-'+id;
+  row.innerHTML=
+    '<div class="chav-nome-row">'+
+      '<div><div class="chav-lbl">Nome</div><input class="chav-inp" type="text" value="'+(c.nome||'')+'" placeholder="Ex: Stitch" oninput="onNome('+id+',this.value)"></div>'+
+      '<button class="chav-del" onclick="removeChaveiro('+id+')" aria-label="Remover">&times;</button>'+
+    '</div>'+
+    '<div class="chav-nums">'+
+      '<div><div class="chav-lbl">Estoque inicial</div><input class="chav-inp" type="number" value="'+(c.qtd||'')+'" placeholder="0" min="0" oninput="onQtd('+id+',this.value)"></div>'+
+      '<div><div class="chav-lbl">Preco de venda</div><input class="chav-inp" type="number" value="'+(c.preco||'')+'" placeholder="R$ 0" min="0" oninput="onPreco('+id+',this.value)"></div>'+
+    '</div>'+
+    '<div class="chav-split" id="split-'+id+'" style="display:none">'+
+      '<div><div class="split-lbl">Loja (<span id="sp-loja-'+id+'">'+pct+'</span>%)</div><div class="split-loja" id="val-loja-'+id+'">R$ 0,00</div></div>'+
+      '<div><div class="split-lbl">Voce (<span id="sp-maker-'+id+'">'+(100-pct)+'</span>%)</div><div class="split-maker" id="val-maker-'+id+'">R$ 0,00</div></div>'+
+    '</div>';
+  list.appendChild(row);
+}
+
 function addChaveiro(){
   var id=nextId++;
   chaveiros.push({id:id,nome:'',qtd:'',preco:'',reposicoes:[],vendas:0});
@@ -745,11 +766,11 @@ function addChaveiro(){
   row.querySelector('input[type="text"]').focus();
 }
 function removeChaveiro(id){
-  chaveiros=chaveiros.filter(function(c){return c.id!==id;});
+  chaveiros=chaveiros.filter(function(c){return c._localId!==id&&c.id!==id;});
   var el=document.getElementById('chav-'+id);if(el)el.remove();
   calcResumo();updatePreviewTop();
 }
-function getC(id){return chaveiros.find(function(c){return c.id===id;});}
+function getC(id){return chaveiros.find(function(c){return c._localId===id||c.id===id;});}
 function onNome(id,v){var c=getC(id);if(c)c.nome=v;updatePreviewTop();}
 function onQtd(id,v){var c=getC(id);if(c)c.qtd=v;updateSplit(id);calcResumo();updatePreviewTop();}
 function onPreco(id,v){var c=getC(id);if(c)c.preco=v;updateSplit(id);calcResumo();}
