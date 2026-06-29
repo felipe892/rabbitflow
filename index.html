@@ -1009,34 +1009,39 @@ async function salvarLojaSupabase(dados){
     pago: dados.pago||false,
     logo_url: dados.logo||null
   };
-  var lojaId = ST.editId;
-  if(lojaId && typeof lojaId === 'string'){
-    // Update
-    await supa.from('lojas').update(lojaPayload).eq('id',lojaId);
-  } else {
-    // Insert
-    var res = await supa.from('lojas').insert(lojaPayload).select().single();
-    if(res.data) lojaId = res.data.id;
-  }
-  // Salvar chaveiros
-  if(lojaId){
-    // Deletar chaveiros antigos e reinserir (simplificado para MVP)
-    if(ST.editId && typeof ST.editId === 'string'){
-      await supa.from('chaveiros').delete().eq('loja_id',lojaId);
+  var lojaId = (ST.editId && typeof ST.editId === 'string') ? ST.editId : null;
+  try {
+    if(lojaId){
+      // Update loja existente
+      var upd = await supa.from('lojas').update(lojaPayload).eq('id',lojaId);
+      if(upd.error) throw upd.error;
+    } else {
+      // Insert nova loja
+      var ins = await supa.from('lojas').insert(lojaPayload).select('id').single();
+      if(ins.error) throw ins.error;
+      lojaId = ins.data.id;
+      dados.id = lojaId;
     }
-    for(var i=0;i<(dados.chaveiros||[]).length;i++){
-      var c = dados.chaveiros[i];
-      if(!c.nome) continue;
-      await supa.from('chaveiros').insert({
-        loja_id: lojaId,
-        maker_id: ST_USER.id,
-        nome: c.nome,
-        qtd_inicial: parseFloat(c.qtd)||0,
-        preco: parseFloat(c.preco)||0,
-        reposicoes: c.reposicoes||[]
-      });
+    // Salvar chaveiros — deletar antigos e reinserir
+    if(lojaId){
+      await supa.from('chaveiros').delete().eq('loja_id', lojaId);
+      for(var i=0;i<(dados.chaveiros||[]).length;i++){
+        var c = dados.chaveiros[i];
+        if(!c.nome) continue;
+        var ci = await supa.from('chaveiros').insert({
+          loja_id: lojaId,
+          maker_id: ST_USER.id,
+          nome: c.nome,
+          qtd_inicial: parseFloat(c.qtd)||0,
+          preco: parseFloat(c.preco)||0,
+          reposicoes: c.reposicoes||[]
+        }).select('id').single();
+        if(ci.data) c.id = ci.data.id;
+      }
     }
-    dados.id = lojaId;
+  } catch(err){
+    console.error('Erro Supabase:', err);
+    toast('Erro ao salvar no banco: '+err.message);
   }
   return dados;
 }
@@ -1166,7 +1171,7 @@ function renderHome(){
   });
 }
 
-function salvarLojaGlobal(dados){
+async function salvarLojaGlobal(dados){
   var tot=0,mk=0;
   (dados.chaveiros||[]).forEach(function(c){
     var t=(parseFloat(c.qtd)||0)+(c.reposicoes||[]).reduce(function(a,r){return a+r;},0);
@@ -1174,16 +1179,16 @@ function salvarLojaGlobal(dados){
     tot+=t; mk+=t*p*(1-(dados.pct||30)/100);
   });
   dados.pecas=tot; dados.aRec=mk;
+  // Salvar no Supabase PRIMEIRO para obter o UUID real
+  dados = await salvarLojaSupabase(dados);
   if(ST.editId){
     var i=ST.lojas.findIndex(function(x){return x.id===ST.editId;});
     if(i>=0){dados.pago=ST.lojas[i].pago||false;ST.lojas[i]=Object.assign({id:ST.editId},dados);}
     toast('Loja "'+dados.nome+'" atualizada!');
   } else {
-    dados.id=Date.now();dados.pago=false;ST.lojas.push(dados);
+    dados.pago=false;ST.lojas.push(dados);
     toast('Loja "'+dados.nome+'" cadastrada!');
   }
-  // Salvar no Supabase em background
-  salvarLojaSupabase(dados);
   renderHome(); setTimeout(function(){ir('pg-home');},800);
 }
 
