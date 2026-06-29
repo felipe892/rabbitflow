@@ -1091,6 +1091,16 @@ async function salvarLojaSupabase(dados){
         } else {
           console.log('Chaveiro salvo:', c.nome, ci.data.id);
           c.id = ci.data.id;
+          // Salvar vendas se houver
+          if(c.vendas > 0){
+            await supa.from('vendas').insert({
+              chaveiro_id: ci.data.id,
+              loja_id: lojaId,
+              maker_id: ST_USER.id,
+              qtd_vendida: c.vendas,
+              origem: 'maker'
+            });
+          }
         }
       }
     }
@@ -1195,15 +1205,23 @@ document.querySelectorAll('.btn-save').forEach(function(btn){
       var qtdVal = inputs[1] ? inputs[1].value : '';
       var precoVal = inputs[2] ? inputs[2].value : '';
       if(!nomeVal) return;
-      // Buscar reposicoes do array global pelo nome
+      // Buscar dados do array global pelo nome
       var existing = chaveiros.find(function(c){ return c.nome===nomeVal; });
+      // Coletar vendas do DOM — input com data-id
+      var vendasDom = 0;
+      if(existing){
+        var vinput = document.querySelector('input[data-id="'+existing.id+'"]');
+        if(!vinput && existing._localId) vinput = document.querySelector('input[data-id="'+existing._localId+'"]');
+        if(vinput) vendasDom = parseFloat(vinput.value)||0;
+        else vendasDom = existing.vendas||0;
+      }
       chaveirosDom.push({
         id: existing ? existing.id : null,
         nome: nomeVal,
         qtd: qtdVal,
         preco: precoVal,
         reposicoes: existing ? (existing.reposicoes||[]) : [],
-        vendas: existing ? (existing.vendas||0) : 0
+        vendas: vendasDom
       });
     });
     console.log('Chaveiros a salvar:', chaveirosDom.length, chaveirosDom.map(function(c){return c.nome;}));
