@@ -700,6 +700,7 @@ button{-webkit-appearance:none;appearance:none;cursor:pointer;font-family:inheri
 </div>
 
 <script>
+
 var chaveiros=[],nextId=1,pct=30;
 var cores=['#E8852A','#D4874A','#B87A50','#8a6a50'];
 function switchTab(name){
@@ -854,11 +855,8 @@ function updatePreview(){
   document.getElementById('prev-end').textContent=document.getElementById('f-end').value||'—';
   document.getElementById('prev-dia').textContent=document.getElementById('f-dia').value;
 }
-</script>
 
-</div>
 
-<script>
 // ── SUPABASE ──
 var SUPA_URL = 'https://jcfkjpfcvrsmhljgwrkv.supabase.co';
 var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjZmtqcGZjdnJzbWhsamd3cmt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3MzgyNTAsImV4cCI6MjA5ODMxNDI1MH0.hiiwK35DNRxkvyhr0d3SWNUSrNsCCvwu_A_h5hjg3xc';
@@ -1601,6 +1599,7 @@ function renderCalc(){
   var el=document.getElementById('hdr-nm-calc');if(el)el.textContent=nm;
   if(ST.makerLogo){var av=document.getElementById('hdr-av-calc');if(av)av.innerHTML='<img src="'+ST.makerLogo+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px">';}
 }
+
 </script>
 </body>
 </html>
