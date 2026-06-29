@@ -1133,7 +1133,7 @@ function ir(id){
   if(id==='pg-fin')renderFin();
   if(id==='pg-prod')renderProd();
   if(id==='pg-calc')renderCalc();
-  if(id==='pg-loja') setTimeout(function(){ carregarFormLoja(); }, 50);
+  if(id==='pg-loja') setTimeout(function(){ carregarFormLoja(); }, 300);
 }
 
 function syncHdr(){
@@ -1197,34 +1197,25 @@ document.querySelectorAll('.btn-save').forEach(function(btn){
     btn.textContent = 'Salvando...';
     btn.disabled = true;
     // Coletar dados
-    // Coletar chaveiros direto do DOM para garantir que está correto
-    var chaveirosDom = [];
-    document.querySelectorAll('.chav-row').forEach(function(row){
-      var inputs = row.querySelectorAll('.chav-inp');
-      var nomeVal = inputs[0] ? inputs[0].value.trim() : '';
-      var qtdVal = inputs[1] ? inputs[1].value : '';
-      var precoVal = inputs[2] ? inputs[2].value : '';
-      if(!nomeVal) return;
-      // Buscar dados do array global pelo nome
-      var existing = chaveiros.find(function(c){ return c.nome===nomeVal; });
-      // Coletar vendas do DOM — input com data-id
-      var vendasDom = 0;
-      if(existing){
-        var vinput = document.querySelector('input[data-id="'+existing.id+'"]');
-        if(!vinput && existing._localId) vinput = document.querySelector('input[data-id="'+existing._localId+'"]');
-        if(vinput) vendasDom = parseFloat(vinput.value)||0;
-        else vendasDom = existing.vendas||0;
-      }
-      chaveirosDom.push({
-        id: existing ? existing.id : null,
-        nome: nomeVal,
-        qtd: qtdVal,
-        preco: precoVal,
-        reposicoes: existing ? (existing.reposicoes||[]) : [],
-        vendas: vendasDom
-      });
+    // Usar array global chaveiros — atualizado em tempo real pelos oninput
+    // Sincronizar vendas do DOM antes de salvar
+    document.querySelectorAll('#vendas-list input[type="number"]').forEach(function(inp){
+      var dataId = inp.getAttribute('data-id');
+      if(!dataId) return;
+      var c = chaveiros.find(function(x){ return String(x.id)===String(dataId) || String(x._localId)===String(dataId); });
+      if(c) c.vendas = parseFloat(inp.value)||0;
     });
-    console.log('Chaveiros a salvar:', chaveirosDom.length, chaveirosDom.map(function(c){return c.nome;}));
+    var chaveirosDom = chaveiros.filter(function(c){ return c.nome; }).map(function(c){
+      return {
+        id: c.id||null,
+        nome: c.nome,
+        qtd: c.qtd,
+        preco: c.preco,
+        reposicoes: c.reposicoes||[],
+        vendas: c.vendas||0
+      };
+    });
+    console.log('Chaveiros a salvar:', chaveirosDom.length, chaveirosDom.map(function(c){return c.nome+' qtd:'+c.qtd;}));
     var dados = {
       nome: nome,
       cat: document.getElementById('f-cat') ? document.getElementById('f-cat').value : '',
