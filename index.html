@@ -1121,7 +1121,7 @@ function ir(id){
   if(id==='pg-fin')renderFin();
   if(id==='pg-prod')renderProd();
   if(id==='pg-calc')renderCalc();
-  if(id==='pg-loja')carregarFormLoja();
+  if(id==='pg-loja') setTimeout(function(){ carregarFormLoja(); }, 50);
 }
 
 function syncHdr(){
@@ -1277,7 +1277,7 @@ async function salvarLojaGlobal(dados){
 function carregarFormLoja(){
   // Resetar form
   chaveiros=[]; nextId=1; pct=30;
-  document.getElementById('chv-list').innerHTML='';
+  var chvList=document.getElementById('chv-list'); if(chvList) chvList.innerHTML='';
   ['f-nome','f-tel','f-ig','f-end','f-cidade'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
   });
@@ -1286,7 +1286,7 @@ function carregarFormLoja(){
 
   if(!ST.editId){
     // Nova loja
-    document.getElementById('form-tt').textContent='Nova loja';
+    var ftt=document.getElementById('form-tt'); if(ftt) ftt.textContent='Nova loja';
     var ed=document.getElementById('form-ed'); if(ed) ed.style.display='none';
     return;
   }
@@ -1295,7 +1295,7 @@ function carregarFormLoja(){
   var l=ST.lojas.find(function(x){return x.id===ST.editId;});
   if(!l) return;
 
-  document.getElementById('form-tt').textContent=l.nome;
+  var ftt2=document.getElementById('form-tt'); if(ftt2) ftt2.textContent=l.nome;
   var ed=document.getElementById('form-ed'); if(ed) ed.style.display='inline-block';
 
   // Preencher campos info
@@ -1316,13 +1316,19 @@ function carregarFormLoja(){
   // Logo
   ST.lojaLogo=l.logo||null;
   var previco=document.getElementById('loja-prev-ico');
-  if(previco) previco.innerHTML=l.logo?'<img src="'+l.logo+'">':'&#127978;';
+  if(previco) previco.innerHTML=l.logo?'<img src="'+l.logo+'" style="width:100%;height:100%;object-fit:cover">':'&#127978;';
 
   // Chaveiros
   chaveiros=JSON.parse(JSON.stringify(l.chaveiros||[]));
-  nextId=chaveiros.length?Math.max.apply(null,chaveiros.map(function(c){return typeof c.id==='number'?c.id:0;}))+1:1;
-  var list=document.getElementById('chv-list'); if(list) list.innerHTML='';
-  chaveiros.forEach(function(c){ criarRow(c); });
+  nextId=1;
+  var list=document.getElementById('chv-list');
+  if(list){
+    list.innerHTML='';
+    chaveiros.forEach(function(c){
+      c._localId=nextId++;
+      criarRowExistente(c);
+    });
+  }
   updateAllSplits(); calcResumo();
 }
 
