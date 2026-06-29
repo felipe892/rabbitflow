@@ -1138,9 +1138,12 @@ document.getElementById('btn-loja-home').addEventListener('click',function(){
   renderHome(); ir('pg-home');
 });
 document.querySelectorAll('.btn-save').forEach(function(btn){
-  btn.addEventListener('click', function(){
+  btn.addEventListener('click', async function(){
     var nome = document.getElementById('f-nome') ? document.getElementById('f-nome').value.trim() : '';
     if(!nome){ toast('Informe o nome da loja.'); return; }
+    // Feedback visual imediato
+    btn.textContent = 'Salvando...';
+    btn.disabled = true;
     // Coletar dados
     var dados = {
       nome: nome,
@@ -1154,7 +1157,9 @@ document.querySelectorAll('.btn-save').forEach(function(btn){
       pct: pct,
       chaveiros: JSON.parse(JSON.stringify(chaveiros))
     };
-    salvarLojaGlobal(dados);
+    await salvarLojaGlobal(dados);
+    btn.textContent = 'Salvar loja';
+    btn.disabled = false;
   });
 });
 document.querySelectorAll('.btn-cancel').forEach(function(btn){
@@ -1204,7 +1209,8 @@ async function salvarLojaGlobal(dados){
     dados.pago=false;ST.lojas.push(dados);
     toast('Loja "'+dados.nome+'" cadastrada!');
   }
-  renderHome(); setTimeout(function(){ir('pg-home');},800);
+  renderHome();
+  ir('pg-home');
 }
 
 function renderFin(){
