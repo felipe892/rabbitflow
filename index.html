@@ -1092,6 +1092,7 @@ function ir(id){
   if(id==='pg-fin')renderFin();
   if(id==='pg-prod')renderProd();
   if(id==='pg-calc')renderCalc();
+  if(id==='pg-loja')carregarFormLoja();
 }
 
 function syncHdr(){
@@ -1141,7 +1142,8 @@ document.getElementById('prod-srch').addEventListener('input',function(){
   renderListaProd(q?prods.filter(function(p){return p.nome.toLowerCase().includes(q);}):prods);
 });
 document.getElementById('card-fin').addEventListener('click',function(){ir('pg-fin');});
-document.getElementById('card-nova').addEventListener('click',function(){ST.editId=null;ir('pg-loja');});
+document.getElementById('card-nova').addEventListener('click',function(){
+  ST.editId=null;ST.editId=null;ir('pg-loja');});
 document.getElementById('card-prod').addEventListener('click',function(){ir('pg-prod');});
 document.getElementById('btn-loja-home').addEventListener('click',function(){
   renderHome(); ir('pg-home');
@@ -1220,6 +1222,58 @@ async function salvarLojaGlobal(dados){
   }
   renderHome();
   ir('pg-home');
+}
+
+function carregarFormLoja(){
+  // Resetar form
+  chaveiros=[]; nextId=1; pct=30;
+  document.getElementById('chv-list').innerHTML='';
+  ['f-nome','f-tel','f-ig','f-end','f-cidade'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  var fcat=document.getElementById('f-cat'); if(fcat) fcat.value='';
+  document.querySelectorAll('.pct-btn').forEach(function(b,i){b.classList.toggle('active',i===0);});
+
+  if(!ST.editId){
+    // Nova loja
+    document.getElementById('form-tt').textContent='Nova loja';
+    var ed=document.getElementById('form-ed'); if(ed) ed.style.display='none';
+    return;
+  }
+
+  // Editar loja existente — buscar em ST.lojas
+  var l=ST.lojas.find(function(x){return x.id===ST.editId;});
+  if(!l) return;
+
+  document.getElementById('form-tt').textContent=l.nome;
+  var ed=document.getElementById('form-ed'); if(ed) ed.style.display='inline-block';
+
+  // Preencher campos info
+  var fnome=document.getElementById('f-nome'); if(fnome) fnome.value=l.nome||'';
+  var fcat=document.getElementById('f-cat'); if(fcat) fcat.value=l.cat||'';
+  var ftel=document.getElementById('f-tel'); if(ftel) ftel.value=l.tel||'';
+  var fig=document.getElementById('f-ig'); if(fig) fig.value=l.ig||'';
+  var fend=document.getElementById('f-end'); if(fend) fend.value=l.end||'';
+  var fcid=document.getElementById('f-cidade'); if(fcid) fcid.value=l.cidade||'';
+  var fdia=document.getElementById('f-dia'); if(fdia) fdia.value=l.dia||'Segunda-feira';
+
+  // Comissão
+  pct=l.pct||30;
+  document.querySelectorAll('.pct-btn').forEach(function(b){
+    b.classList.toggle('active', parseInt(b.textContent)===pct);
+  });
+
+  // Logo
+  ST.lojaLogo=l.logo||null;
+  var previco=document.getElementById('loja-prev-ico');
+  if(previco) previco.innerHTML=l.logo?'<img src="'+l.logo+'">':'&#127978;';
+
+  // Chaveiros
+  chaveiros=JSON.parse(JSON.stringify(l.chaveiros||[]));
+  nextId=chaveiros.length?Math.max.apply(null,chaveiros.map(function(c){return typeof c.id==='number'?c.id:0;}))+1:1;
+  var list=document.getElementById('chv-list'); if(list) list.innerHTML='';
+  chaveiros.forEach(function(c){ criarRow(c); });
+  updateAllSplits(); calcResumo();
 }
 
 function renderFin(){
