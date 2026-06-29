@@ -1185,6 +1185,26 @@ document.querySelectorAll('.btn-save').forEach(function(btn){
     btn.textContent = 'Salvando...';
     btn.disabled = true;
     // Coletar dados
+    // Coletar chaveiros direto do DOM para garantir que está correto
+    var chaveirosDom = [];
+    document.querySelectorAll('.chav-row').forEach(function(row){
+      var inputs = row.querySelectorAll('.chav-inp');
+      var nomeVal = inputs[0] ? inputs[0].value.trim() : '';
+      var qtdVal = inputs[1] ? inputs[1].value : '';
+      var precoVal = inputs[2] ? inputs[2].value : '';
+      if(!nomeVal) return;
+      // Buscar reposicoes do array global pelo nome
+      var existing = chaveiros.find(function(c){ return c.nome===nomeVal; });
+      chaveirosDom.push({
+        id: existing ? existing.id : null,
+        nome: nomeVal,
+        qtd: qtdVal,
+        preco: precoVal,
+        reposicoes: existing ? (existing.reposicoes||[]) : [],
+        vendas: existing ? (existing.vendas||0) : 0
+      });
+    });
+    console.log('Chaveiros a salvar:', chaveirosDom.length, chaveirosDom.map(function(c){return c.nome;}));
     var dados = {
       nome: nome,
       cat: document.getElementById('f-cat') ? document.getElementById('f-cat').value : '',
@@ -1195,8 +1215,9 @@ document.querySelectorAll('.btn-save').forEach(function(btn){
       dia: document.getElementById('f-dia') ? document.getElementById('f-dia').value : '',
       logo: ST.lojaLogo || null,
       pct: pct,
-      chaveiros: JSON.parse(JSON.stringify(chaveiros))
+      chaveiros: chaveirosDom
     };
+    console.log('Salvando loja:', dados.nome, 'ST.editId:', ST.editId);
     await salvarLojaGlobal(dados);
     btn.textContent = 'Salvar loja';
     btn.disabled = false;
