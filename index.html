@@ -993,12 +993,14 @@ async function carregarDadosMaker(){
       console.log('Chaveiros da loja '+l.nome+':', chavRes.data ? chavRes.data.length : 'ERRO', chavRes.error ? chavRes.error.message : '');
       if(chavRes.data) chavRes.data.forEach(function(c){ console.log(' -', c.nome, 'qtd:', c.qtd_inicial, 'preco:', c.preco); });
       var chaveirosMapped = (chavRes.data||[]).map(function(c){
+        var reps = [];
+        try { reps = c.reposicoes ? (Array.isArray(c.reposicoes) ? c.reposicoes : JSON.parse(c.reposicoes)) : []; } catch(e){ reps=[]; }
         return {
           id: c.id,
           nome: c.nome,
-          qtd: c.qtd_inicial,
-          preco: c.preco,
-          reposicoes: c.reposicoes||[],
+          qtd: String(c.qtd_inicial||0),
+          preco: String(c.preco||0),
+          reposicoes: reps,
           vendas: 0
         };
       });
@@ -1320,14 +1322,18 @@ function carregarFormLoja(){
 
   // Chaveiros
   chaveiros=JSON.parse(JSON.stringify(l.chaveiros||[]));
+  console.log('carregarFormLoja: chaveiros da loja '+l.nome+':', chaveiros.length, chaveiros.map(function(c){return c.nome+' qtd:'+c.qtd;}));
   nextId=1;
   var list=document.getElementById('chv-list');
+  console.log('chv-list elemento:', list ? 'ENCONTRADO' : 'NAO ENCONTRADO');
   if(list){
     list.innerHTML='';
     chaveiros.forEach(function(c){
       c._localId=nextId++;
+      console.log('Criando row para:', c.nome);
       criarRowExistente(c);
     });
+    console.log('Rows criados:', list.querySelectorAll('.chav-row').length);
   }
   updateAllSplits(); calcResumo();
 }
