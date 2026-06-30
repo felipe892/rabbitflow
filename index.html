@@ -175,6 +175,10 @@ body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff}
         </div>
         <div id="login-erro" style="font-size:12px;color:#ff6b6b;text-align:center;display:none"></div>
         <button class="btn-entrar" id="btn-login" onclick="fazerLogin()">Entrar no RabbitFlow →</button>
+        <div style="text-align:center">
+          <button onclick="esqueceuSenha()" style="background:none;border:none;color:#888;font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit">Esqueci minha senha</button>
+        </div>
+        <div id="esqueceu-ok" style="font-size:12px;color:#3fb950;text-align:center;display:none">E-mail de recuperação enviado! Verifique sua caixa de entrada.</div>
       </div>
 
       <!-- FORM CADASTRO -->
@@ -500,6 +504,10 @@ body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font-sans);background:#0a0a0a;color:#fff}
 .page{display:grid;grid-template-columns:1fr 1fr;gap:0;min-height:800px}
+@media(max-width:700px){
+  .page{grid-template-columns:1fr}
+  .right{display:none}
+}
 .left{padding:28px 24px;border-right:0.5px solid #1a1a1a;overflow-y:auto}
 .right{padding:28px 24px;background:#111;overflow-y:auto}
 .section-title{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;font-weight:500}
@@ -1051,6 +1059,27 @@ async function fazerLogin(){
   renderHome();
   ir('pg-home');
   toast('Bem-vindo ao RabbitFlow!');
+}
+
+async function esqueceuSenha(){
+  var email = document.getElementById('login-email').value.trim();
+  var erro = document.getElementById('login-erro');
+  var ok = document.getElementById('esqueceu-ok');
+  erro.style.display='none'; ok.style.display='none';
+  if(!email){
+    erro.textContent='Digite seu e-mail acima primeiro.';
+    erro.style.display='block';
+    return;
+  }
+  var res = await supa.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  if(res.error){
+    erro.textContent='Erro: '+res.error.message;
+    erro.style.display='block';
+  } else {
+    ok.style.display='block';
+  }
 }
 
 async function fazerCadastro(){
