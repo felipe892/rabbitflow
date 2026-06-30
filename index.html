@@ -1262,9 +1262,9 @@ async function salvarLojaSupabase(dados){
         }
         // Salvar vendas manuais do maker, se houver
         if(c.id){
-          // Sempre deletar vendas do maker para este chaveiro
-          await supa.from('vendas').delete().eq('chaveiro_id', c.id).eq('origem','maker');
-          // Só reinserir se houver vendas > 0
+          // Deletar TODAS as vendas deste chaveiro (maker + comerciante)
+          await supa.from('vendas').delete().eq('chaveiro_id', c.id);
+          // Reinserir com o valor atual (se > 0)
           if(parseFloat(c.vendas) > 0){
             await supa.from('vendas').insert({
               chaveiro_id: c.id,
@@ -1786,7 +1786,7 @@ function renderVendas(){
 }
 
 function onVenda(id,val){
-  var c=chaveiros.find(function(x){return x.id===id;});
+  var c=getC(id)||chaveiros.find(function(x){return String(x.id)===String(id);});
   if(c) c.vendas=parseFloat(val)||0;
 }
 
