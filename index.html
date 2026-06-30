@@ -1571,12 +1571,13 @@ function renderFin(){
   var hoje=new Date();
   var ds=hoje.getDate().toString().padStart(2,'0')+'/'+(hoje.getMonth()+1).toString().padStart(2,'0')+'/'+hoje.getFullYear();
   ST.lojas.forEach(function(l){
-    var vendas=0,itens=[];
+    var vendas=0,itens=[],totalConsignado=0;
     (l.chaveiros||[]).forEach(function(c){
       var enviado=(parseFloat(c.qtd)||0)+(c.reposicoes||[]).reduce(function(a,r){return a+r;},0);
-      var t=(c.vendas>0)?parseFloat(c.vendas):enviado;
       var p=parseFloat(c.preco)||0;
-      if(t>0&&p>0){vendas+=t*p;itens.push({nome:c.nome,qtd:t,usouVendas:c.vendas>0});}
+      totalConsignado+=enviado*p;
+      var t=parseFloat(c.vendas)||0;
+      if(t>0&&p>0){vendas+=t*p;itens.push({nome:c.nome,qtd:t,usouVendas:true});}
     });
     var com=vendas*(l.pct||30)/100, voce=vendas-com;
     if(l.pago){tPago+=voce;}else{tRec+=voce;pend++;}
@@ -1596,8 +1597,9 @@ function renderFin(){
         '<div class="fin-st '+(l.pago?'ok':'p')+'">'+(l.pago?'&#10004; Pago':'&#11044; Aguardando')+'</div>'+
       '</div>'+
       '<div class="fin-grid">'+
-        '<div class="fin-it"><div class="fin-lbl">Total em consignacao</div><div class="fin-val">R$ '+vendas.toFixed(2).replace('.',',')+'</div></div>'+
+        '<div class="fin-it"><div class="fin-lbl">Total consignado</div><div class="fin-val sm" style="color:#777">R$ '+totalConsignado.toFixed(2).replace('.',',')+'</div></div>'+
         '<div class="fin-it"><div class="fin-lbl">Comissao ('+l.pct+'%)</div><div class="fin-val sm">R$ '+com.toFixed(2).replace('.',',')+'</div></div>'+
+        '<div class="fin-it"><div class="fin-lbl">Vendas realizadas</div><div class="fin-val">R$ '+vendas.toFixed(2).replace('.',',')+'</div></div>'+
         '<div class="fin-it dest full"><div class="fin-lbl">Voce recebe</div><div class="fin-val or">R$ '+voce.toFixed(2).replace('.',',')+'</div></div>'+
         '<div class="fin-it"><div class="fin-lbl">Ultima atualizacao</div><div class="fin-val sm">'+ds+'</div></div>'+
         '<div class="fin-it"><div class="fin-lbl">Pecas em circulacao</div><div class="fin-val sm">'+l.pecas+'</div></div>'+
