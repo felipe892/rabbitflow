@@ -136,7 +136,13 @@ body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff}
         <div class="divider"></div>
         <div id="com-lista" style="width:100%;display:flex;flex-direction:column;gap:10px"></div>
         <button class="btn-entrar" id="com-enviar" style="margin-top:16px">Enviar vendas &#8594;</button>
-        <div id="com-sucesso" style="display:none;text-align:center;padding:20px 0;color:#3fb950;font-size:14px;font-weight:600">&#10003; Vendas enviadas! Obrigado.</div>
+        <div id="com-sucesso" style="display:none;width:100%">
+          <div style="background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.3);border-radius:14px;padding:28px 20px;text-align:center">
+            <div style="font-size:36px;margin-bottom:12px">&#10003;</div>
+            <div style="font-size:16px;font-weight:600;color:#3fb950;margin-bottom:8px">Vendas enviadas com sucesso!</div>
+            <div style="font-size:13px;color:#888;line-height:1.6">Obrigado pela informação.<br>Os dados já foram registrados para o RabbitPrint.</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1255,15 +1261,19 @@ async function salvarLojaSupabase(dados){
           }
         }
         // Salvar vendas manuais do maker, se houver
-        if(c.vendas > 0 && c.id){
+        if(c.id){
+          // Sempre deletar vendas do maker para este chaveiro
           await supa.from('vendas').delete().eq('chaveiro_id', c.id).eq('origem','maker');
-          await supa.from('vendas').insert({
-            chaveiro_id: c.id,
-            loja_id: lojaId,
-            maker_id: ST_USER.id,
-            qtd_vendida: c.vendas,
-            origem: 'maker'
-          });
+          // Só reinserir se houver vendas > 0
+          if(parseFloat(c.vendas) > 0){
+            await supa.from('vendas').insert({
+              chaveiro_id: c.id,
+              loja_id: lojaId,
+              maker_id: ST_USER.id,
+              qtd_vendida: parseFloat(c.vendas),
+              origem: 'maker'
+            });
+          }
         }
       }
       // Remover do banco chaveiros que não estão mais no form (foram excluídos)
