@@ -1134,7 +1134,18 @@ function ir(id){
   if(id==='pg-fin')renderFin();
   if(id==='pg-prod')renderProd();
   if(id==='pg-calc')renderCalc();
-  if(id==='pg-loja') setTimeout(function(){ carregarFormLoja(); }, 300);
+  if(id==='pg-loja'){
+    // Esperar o chv-list estar no DOM antes de carregar
+    var tentativas=0;
+    var aguardar=setInterval(function(){
+      tentativas++;
+      var el=document.getElementById('chv-list');
+      if(el || tentativas>20){
+        clearInterval(aguardar);
+        carregarFormLoja();
+      }
+    },50);
+  }
 }
 
 function syncHdr(){
@@ -1375,20 +1386,17 @@ function carregarFormLoja(){
   var previco=document.getElementById('loja-prev-ico');
   if(previco) previco.innerHTML=l.logo?'<img src="'+l.logo+'" style="width:100%;height:100%;object-fit:cover">':'&#127978;';
 
-  // Chaveiros
+  // Chaveiros — ativar aba estoque temporariamente para garantir que chv-list está no DOM
+  switchTab('estoque');
   chaveiros=JSON.parse(JSON.stringify(l.chaveiros||[]));
-  console.log('carregarFormLoja: chaveiros da loja '+l.nome+':', chaveiros.length, chaveiros.map(function(c){return c.nome+' qtd:'+c.qtd;}));
   nextId=1;
   var list=document.getElementById('chv-list');
-  console.log('chv-list elemento:', list ? 'ENCONTRADO' : 'NAO ENCONTRADO');
   if(list){
     list.innerHTML='';
     chaveiros.forEach(function(c){
       c._localId=nextId++;
-      console.log('Criando row para:', c.nome);
       criarRowExistente(c);
     });
-    console.log('Rows criados:', list.querySelectorAll('.chav-row').length);
   }
   updateAllSplits(); calcResumo();
 }
