@@ -121,6 +121,27 @@ body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff}
 
 <div class="toast" id="toast"><div class="toast-ic">&#10003;</div><span id="tmsg"></span></div>
 
+<!-- COMERCIANTE (link publico) -->
+<div class="pg" id="pg-comerciante">
+  <div class="setup-wrap">
+    <div class="setup-box" style="max-width:480px">
+      <span style="font-size:28px;font-weight:700;color:#fff;letter-spacing:-0.02em">Rabbit<span style="color:#E8852A">Flow</span></span>
+      <div id="com-loading" style="text-align:center;padding:30px 0;color:#888;font-size:13px">Carregando...</div>
+      <div id="com-erro" style="display:none;text-align:center;padding:30px 0;color:#ff6b6b;font-size:13px">Link invalido ou loja nao encontrada.</div>
+      <div id="com-content" style="display:none;width:100%">
+        <div style="text-align:center;margin-bottom:6px">
+          <div id="com-loja-nome" style="font-size:18px;font-weight:600;color:#fff"></div>
+          <div style="font-size:12px;color:#888;margin-top:4px">Informe quantas unidades de cada produto voce vendeu</div>
+        </div>
+        <div class="divider"></div>
+        <div id="com-lista" style="width:100%;display:flex;flex-direction:column;gap:10px"></div>
+        <button class="btn-entrar" id="com-enviar" style="margin-top:16px">Enviar vendas &#8594;</button>
+        <div id="com-sucesso" style="display:none;text-align:center;padding:20px 0;color:#3fb950;font-size:14px;font-weight:600">&#10003; Vendas enviadas! Obrigado.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- SETUP -->
 <!-- LOGIN -->
 <div class="pg on" id="pg-login">
@@ -471,7 +492,8 @@ body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff}
 <div style="display:flex;align-items:center;gap:10px;padding:14px 22px;border-bottom:1px solid #1a1a1a;background:#0d0d0d">
   <button id="btn-loja-home" style="width:32px;height:32px;background:rgba(232,133,42,0.15);border:1px solid rgba(232,133,42,0.35);border-radius:8px;color:#d4803a;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#127968;</button>
   <span id="loja-titulo" style="font-size:14px;font-weight:500;color:#fff;flex:1">Nova loja</span>
-  <button id="btn-loja-del" style="width:32px;height:32px;background:rgba(220,60,60,0.15);border:1px solid rgba(220,60,60,0.3);border-radius:8px;color:#ff6b6b;font-size:16px;cursor:pointer;display:none;align-items:center;justify-content:center" title="Excluir loja">&#128465;</button>
+  <button id="btn-gerar-link" style="background:rgba(232,133,42,0.15);border:1px solid rgba(232,133,42,0.35);border-radius:8px;color:#d4803a;font-size:12px;font-weight:600;cursor:pointer;padding:0 14px;height:32px;display:none;align-items:center;gap:6px;margin-right:8px" title="Gerar link para o comerciante">&#128279; Link comerciante</button>
+<button id="btn-loja-del" style="width:32px;height:32px;background:rgba(220,60,60,0.15);border:1px solid rgba(220,60,60,0.3);border-radius:8px;color:#ff6b6b;font-size:16px;cursor:pointer;display:none;align-items:center;justify-content:center" title="Excluir loja">&#128465;</button>
 </div>
 
 <style>
@@ -879,17 +901,103 @@ var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 var supa = supabase.createClient(SUPA_URL, SUPA_KEY);
 var ST_USER = null; // usuário logado
 
-// Inicializar — checar se já tem sessão ativa
-supa.auth.getSession().then(function(res){
-  if(res.data && res.data.session){
-    ST_USER = res.data.session.user;
-    carregarDadosMaker().then(function(){
-      renderHome();
-      ir('pg-home');
-    });
-  } else {
-    ir('pg-login');
+
+// ── LINK DO COMERCIANTE ──
+function getUrlParam(name){
+  var params = new URLSearchParams(window.location.search);
+  return params.get(name);
+}
+
+async function checarLinkComerciante(){
+  var lojaId = getUrlParam('loja');
+  if(!lojaId) return false;
+  // Modo comerciante — não precisa de login
+  ir('pg-comerciante');
+  await carregarDadosComerciante(lojaId);
+  return true;
+}
+
+async function carregarDadosComerciante(lojaId){
+  var loading = document.getElementById('com-loading');
+  var erro = document.getElementById('com-erro');
+  var content = document.getElementById('com-content');
+  try {
+    var lojaRes = await supa.from('lojas').select('*').eq('id', lojaId).single();
+    if(lojaRes.error || !lojaRes.data){
+      loading.style.display='none';
+      erro.style.display='block';
+      return;
+    }
+    var loja = lojaRes.data;
+    var chavRes = await supa.from('chaveiros').select('*').eq('loja_id', lojaId).order('criado_em');
+    var chaveirosLoja = chavRes.data||[];
+
+    document.getElementById('com-loja-nome').textContent = loja.nome;
+    var lista = document.getElementById('com-lista');
+    lista.innerHTML='';
+    if(!chaveirosLoja.length){
+      lista.innerHTML = '<div style="text-align:center;color:#666;font-size:13px;padding:20px">Nenhum produto cadastrado nessa loja ainda.</div>';
+    } else {
+      chaveirosLoja.forEach(function(c){
+        var row = document.createElement('div');
+        row.style.cssText = 'background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:12px';
+        row.innerHTML =
+          '<div style="font-size:14px;font-weight:500;color:#fff">'+c.nome+'</div>'+
+          '<div style="display:flex;align-items:center;gap:8px">'+
+            '<span style="font-size:11px;color:#777">vendidos</span>'+
+            '<input type="number" min="0" value="0" data-chaveiro-id="'+c.id+'" class="com-qtd-input" '+
+              'style="width:64px;background:#1e1e1e;border:1px solid #333;border-radius:8px;padding:8px;font-size:15px;font-weight:600;color:#E8852A;text-align:center;outline:none;font-family:inherit">'+
+          '</div>';
+        lista.appendChild(row);
+      });
+    }
+    loading.style.display='none';
+    content.style.display='block';
+
+    document.getElementById('com-enviar').onclick = async function(){
+      var btn = this;
+      btn.textContent = 'Enviando...';
+      btn.disabled = true;
+      var inputs = document.querySelectorAll('.com-qtd-input');
+      var algumaVenda = false;
+      for(var i=0;i<inputs.length;i++){
+        var qtd = parseFloat(inputs[i].value)||0;
+        if(qtd>0){
+          algumaVenda = true;
+          await supa.from('vendas').insert({
+            chaveiro_id: inputs[i].getAttribute('data-chaveiro-id'),
+            loja_id: lojaId,
+            maker_id: loja.maker_id,
+            qtd_vendida: qtd,
+            origem: 'comerciante'
+          });
+        }
+      }
+      content.style.display='none';
+      document.getElementById('com-sucesso').style.display='block';
+    };
+  } catch(err){
+    console.error('Erro ao carregar dados do comerciante:', err);
+    loading.style.display='none';
+    erro.style.display='block';
   }
+}
+
+// Inicializar — checar se é link de comerciante primeiro
+checarLinkComerciante().then(function(isComerciante){
+  if(isComerciante) return;
+  // Senão, fluxo normal de login
+  supa.auth.getSession().then(function(res){
+    if(res.data && res.data.session){
+      ST_USER = res.data.session.user;
+      carregarDadosMaker().then(function(){
+        renderHome();
+        ir('pg-home');
+      });
+    } else {
+      ir('pg-login');
+    }
+  });
 });
 
 // Escutar mudanças de auth
@@ -1084,12 +1192,9 @@ async function salvarLojaSupabase(dados){
       lojaId = ins.data.id;
       dados.id = lojaId;
     }
-    // Salvar chaveiros — deletar antigos e reinserir
+    // Salvar chaveiros — UPDATE se já existe (preserva vínculo com vendas), INSERT se novo
     if(lojaId){
-      // Deletar vendas antigas antes de reinserir
-      await supa.from('vendas').delete().eq('loja_id', lojaId);
-      var del = await supa.from('chaveiros').delete().eq('loja_id', lojaId);
-      console.log('Delete chaveiros:', del.error ? 'ERRO: '+del.error.message : 'OK');
+      var idsExistentesNoForm = [];
       for(var i=0;i<(dados.chaveiros||[]).length;i++){
         var c = dados.chaveiros[i];
         if(!c.nome) continue;
@@ -1101,23 +1206,44 @@ async function salvarLojaSupabase(dados){
           preco: parseFloat(c.preco)||0,
           reposicoes: c.reposicoes||[]
         };
-        console.log('Inserindo chaveiro:', c.nome, 'loja_id:', lojaId);
-        var ci = await supa.from('chaveiros').insert(payload).select('id').single();
-        if(ci.error){
-          console.error('Erro chaveiro '+c.nome+':', ci.error.message, ci.error.details);
-          toast('Erro ao salvar chaveiro: '+ci.error.message);
+        if(c.id && typeof c.id === 'string'){
+          // UPDATE — chaveiro já existe, preserva vendas vinculadas
+          var upc = await supa.from('chaveiros').update(payload).eq('id', c.id);
+          if(upc.error){
+            console.error('Erro update chaveiro '+c.nome+':', upc.error.message);
+            toast('Erro ao atualizar chaveiro: '+upc.error.message);
+          }
+          idsExistentesNoForm.push(c.id);
         } else {
-          console.log('Chaveiro salvo:', c.nome, ci.data.id);
-          c.id = ci.data.id;
-          // Salvar vendas se houver
-          if(c.vendas > 0){
-            await supa.from('vendas').insert({
-              chaveiro_id: ci.data.id,
-              loja_id: lojaId,
-              maker_id: ST_USER.id,
-              qtd_vendida: c.vendas,
-              origem: 'maker'
-            });
+          // INSERT — chaveiro novo
+          var ci = await supa.from('chaveiros').insert(payload).select('id').single();
+          if(ci.error){
+            console.error('Erro chaveiro '+c.nome+':', ci.error.message, ci.error.details);
+            toast('Erro ao salvar chaveiro: '+ci.error.message);
+          } else {
+            c.id = ci.data.id;
+            idsExistentesNoForm.push(ci.data.id);
+          }
+        }
+        // Salvar vendas manuais do maker, se houver
+        if(c.vendas > 0 && c.id){
+          await supa.from('vendas').delete().eq('chaveiro_id', c.id).eq('origem','maker');
+          await supa.from('vendas').insert({
+            chaveiro_id: c.id,
+            loja_id: lojaId,
+            maker_id: ST_USER.id,
+            qtd_vendida: c.vendas,
+            origem: 'maker'
+          });
+        }
+      }
+      // Remover do banco chaveiros que não estão mais no form (foram excluídos)
+      var todosChav = await supa.from('chaveiros').select('id').eq('loja_id', lojaId);
+      if(todosChav.data){
+        for(var j=0;j<todosChav.data.length;j++){
+          if(idsExistentesNoForm.indexOf(todosChav.data[j].id) === -1){
+            await supa.from('vendas').delete().eq('chaveiro_id', todosChav.data[j].id);
+            await supa.from('chaveiros').delete().eq('id', todosChav.data[j].id);
           }
         }
       }
@@ -1228,6 +1354,17 @@ document.getElementById('card-fin').addEventListener('click',function(){ir('pg-f
 document.getElementById('card-nova').addEventListener('click',function(){
   ST.editId=null;ST.editId=null;ir('pg-loja');});
 document.getElementById('card-prod').addEventListener('click',function(){ir('pg-prod');});
+document.getElementById('btn-gerar-link').addEventListener('click',function(){
+  if(!ST.editId){ toast('Salve a loja primeiro.'); return; }
+  var url = window.location.origin + window.location.pathname + '?loja=' + ST.editId;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(url).then(function(){
+      toast('Link copiado! Cole no WhatsApp do comerciante.');
+    });
+  } else {
+    prompt('Copie o link abaixo:', url);
+  }
+});
 document.getElementById('btn-loja-home').addEventListener('click',function(){
   renderHome(); ir('pg-home');
 });
@@ -1367,6 +1504,7 @@ function carregarFormLoja(){
     var ftt=document.getElementById('form-tt'); if(ftt) ftt.textContent='Nova loja';
     var ed=document.getElementById('form-ed'); if(ed) ed.style.display='none';
   var delBtn=document.getElementById('btn-loja-del'); if(delBtn) delBtn.style.display='none';
+  var linkBtn2=document.getElementById('btn-gerar-link'); if(linkBtn2) linkBtn2.style.display='none';
     return;
   }
 
@@ -1377,6 +1515,7 @@ function carregarFormLoja(){
   var ftt2=document.getElementById('form-tt'); if(ftt2) ftt2.textContent=l.nome;
   var ed=document.getElementById('form-ed'); if(ed) ed.style.display='inline-block';
   var delBtn=document.getElementById('btn-loja-del'); if(delBtn) delBtn.style.display='flex';
+  var linkBtn=document.getElementById('btn-gerar-link'); if(linkBtn) linkBtn.style.display='flex';
 
   // Preencher campos info
   var fnome=document.getElementById('f-nome'); if(fnome) fnome.value=l.nome||'';
