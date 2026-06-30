@@ -727,6 +727,8 @@ function totalEnviado(c){return(parseFloat(c.qtd)||0)+c.reposicoes.reduce(functi
 function criarRowExistente(c){
   var id = c._localId; // usar id local numérico para seletores CSS
   var list=document.getElementById('chav-list');
+  console.log('criarRowExistente:', c.nome, 'list:', list?'OK':'NULL', 'id:', id);
+  if(!list){ console.error('chav-list NAO ENCONTRADO!'); return; }
   var row=document.createElement('div');
   row.className='chav-row'; row.id='chav-'+id;
   row.innerHTML=
@@ -1071,6 +1073,8 @@ async function salvarLojaSupabase(dados){
     }
     // Salvar chaveiros — deletar antigos e reinserir
     if(lojaId){
+      // Deletar vendas antigas antes de reinserir
+      await supa.from('vendas').delete().eq('loja_id', lojaId);
       var del = await supa.from('chaveiros').delete().eq('loja_id', lojaId);
       console.log('Delete chaveiros:', del.error ? 'ERRO: '+del.error.message : 'OK');
       for(var i=0;i<(dados.chaveiros||[]).length;i++){
@@ -1135,16 +1139,11 @@ function ir(id){
   if(id==='pg-prod')renderProd();
   if(id==='pg-calc')renderCalc();
   if(id==='pg-loja'){
-    // Esperar o chv-list estar no DOM antes de carregar
-    var tentativas=0;
-    var aguardar=setInterval(function(){
-      tentativas++;
-      var el=document.getElementById('chv-list');
-      if(el || tentativas>20){
-        clearInterval(aguardar);
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
         carregarFormLoja();
-      }
-    },50);
+      });
+    });
   }
 }
 
@@ -1386,10 +1385,11 @@ function carregarFormLoja(){
   var previco=document.getElementById('loja-prev-ico');
   if(previco) previco.innerHTML=l.logo?'<img src="'+l.logo+'" style="width:100%;height:100%;object-fit:cover">':'&#127978;';
 
-  // Chaveiros — ativar aba estoque temporariamente para garantir que chv-list está no DOM
-  switchTab('estoque');
+  // Chaveiros
   chaveiros=JSON.parse(JSON.stringify(l.chaveiros||[]));
   nextId=1;
+  // Ativar aba estoque para garantir que chv-list está visível
+  switchTab('estoque');
   var list=document.getElementById('chv-list');
   if(list){
     list.innerHTML='';
