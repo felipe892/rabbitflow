@@ -471,6 +471,7 @@ body{font-family:system-ui,sans-serif;background:#0a0a0a;color:#fff}
 <div style="display:flex;align-items:center;gap:10px;padding:14px 22px;border-bottom:1px solid #1a1a1a;background:#0d0d0d">
   <button id="btn-loja-home" style="width:32px;height:32px;background:rgba(232,133,42,0.15);border:1px solid rgba(232,133,42,0.35);border-radius:8px;color:#d4803a;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#127968;</button>
   <span id="loja-titulo" style="font-size:14px;font-weight:500;color:#fff;flex:1">Nova loja</span>
+  <button id="btn-loja-del" style="width:32px;height:32px;background:rgba(220,60,60,0.15);border:1px solid rgba(220,60,60,0.3);border-radius:8px;color:#ff6b6b;font-size:16px;cursor:pointer;display:none;align-items:center;justify-content:center" title="Excluir loja">&#128465;</button>
 </div>
 
 <style>
@@ -1151,11 +1152,12 @@ document.getElementById('logo-file').addEventListener('change',function(){
   r.onload=function(e){
     ST.makerLogo=e.target.result;
     document.getElementById('logo-pick').innerHTML='<img src="'+ST.makerLogo+'"><div class="logo-hint">Trocar</div>';
+    if(ST_USER) supa.from('makers').update({logo_url:ST.makerLogo}).eq('id',ST_USER.id);
   };
   r.readAsDataURL(f);
 });
 
-document.getElementById('btn-entrar').addEventListener('click',function(){
+document.getElementById('btn-entrar').addEventListener('click', async function(){
   var nome=document.getElementById('s-nome').value.trim();
   var pessoa=document.getElementById('s-pessoa').value.trim();
   if(!nome){document.getElementById('s-nome').focus();return;}
@@ -1163,10 +1165,27 @@ document.getElementById('btn-entrar').addEventListener('click',function(){
   syncHdr();
   document.getElementById('w-nm').textContent='Ola, '+ST.makerPessoa+'!';
   document.getElementById('w-sb').textContent=nome+' - Tudo sob controle';
-  renderHome(); ir('pg-home'); toast('Bem-vindo ao RabbitFlow!');
+  // Salvar perfil no Supabase
+  if(ST_USER){
+    var updatePayload = {nome:nome, pessoa:pessoa};
+    if(ST.makerLogo) updatePayload.logo_url = ST.makerLogo;
+    await supa.from('makers').update(updatePayload).eq('id',ST_USER.id);
+    toast('Perfil salvo!');
+  }
+  renderHome(); ir('pg-home');
 });
 
-document.getElementById('btn-perfil').addEventListener('click',function(){ir('pg-setup');});
+document.getElementById('btn-perfil').addEventListener('click',function(){
+  // Preencher campos com dados atuais
+  var sn=document.getElementById('s-nome'); if(sn) sn.value=ST.makerNome||'';
+  var sp=document.getElementById('s-pessoa'); if(sp) sp.value=ST.makerPessoa||'';
+  // Carregar logo se existir
+  if(ST.makerLogo){
+    var lp=document.getElementById('logo-pick');
+    if(lp) lp.innerHTML='<img src="'+ST.makerLogo+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px"><div class="logo-hint">Trocar</div>';
+  }
+  ir('pg-setup');
+});
 document.getElementById('btn-sair') && document.getElementById('btn-sair').addEventListener('click',function(){fazerLogout();});
 document.getElementById('btn-home-fin').addEventListener('click',function(){renderHome();ir('pg-home');});
 document.getElementById('btn-home-prod').addEventListener('click',function(){renderHome();ir('pg-home');});
@@ -1188,6 +1207,24 @@ document.getElementById('card-nova').addEventListener('click',function(){
 document.getElementById('card-prod').addEventListener('click',function(){ir('pg-prod');});
 document.getElementById('btn-loja-home').addEventListener('click',function(){
   renderHome(); ir('pg-home');
+});
+document.getElementById('btn-loja-del').addEventListener('click', async function(){
+  if(!ST.editId) return;
+  var l = ST.lojas.find(function(x){ return x.id===ST.editId; });
+  if(!l) return;
+  if(!confirm('Excluir a loja "'+l.nome+'"? Essa ação não pode ser desfeita.')) return;
+  // Excluir do Supabase
+  if(ST_USER){
+    await supa.from('vendas').delete().eq('loja_id', ST.editId);
+    await supa.from('chaveiros').delete().eq('loja_id', ST.editId);
+    await supa.from('lojas').delete().eq('id', ST.editId);
+  }
+  // Excluir do ST.lojas local
+  ST.lojas = ST.lojas.filter(function(x){ return x.id !== ST.editId; });
+  ST.editId = null;
+  renderHome();
+  ir('pg-home');
+  toast('Loja excluída!');
 });
 document.querySelectorAll('.btn-save').forEach(function(btn){
   btn.addEventListener('click', async function(){
@@ -1257,7 +1294,14 @@ function renderHome(){
     var c=document.createElement('div');c.className='loja-li';
     var lg=l.logo?'<img src="'+l.logo+'">':'&#128717;';
     var sl=l.aRec>0?'<div class="loja-sl">R$ '+l.aRec.toFixed(2).replace('.',',')+'</div>':'';
-    c.innerHTML='<div class="loja-av">'+lg+'</div><div style="flex:1"><div class="loja-nm">'+l.nome+'</div><div class="loja-mt">'+(l.cat||'Sem categoria')+' - '+l.pecas+' pecas - '+l.dia+'</div></div>'+sl+'<span style="font-size:15px;color:#444">&#8250;</span>';
+    c.innerHTML='<div class="loja-av">'+lg+'</div><div style="flex:1"><div class="loja-nm">'+l.nome+'</div><div class="loja-mt">'+(l.cat||'Sem categoria')+' - '+l.pecas+' pecas - '+l.dia+'</div></div>'+sl+'<button class="loja-del" data-id="'+l.id+'" title="Excluir loja" style="background:rgba(255,80,80,0.1);border:1px solid rgba(255,80,80,0.3);border-radius:8px;padding:6px 10px;color:#ff5050;font-size:14px;cursor:pointer;margin-left:8px;flex-shrink:0">&#128465;</button><span style="font-size:15px;color:#444;margin-left:4px">&#8250;</span>';
+    c.querySelector('.loja-del').addEventListener('click', function(e){
+      e.stopPropagation();
+      var lid = this.getAttribute('data-id');
+      var lnome = ST.lojas.find(function(x){return x.id===lid;});
+      if(!confirm('Excluir a loja "'+(lnome?lnome.nome:'')+'"? Esta ação não pode ser desfeita.')) return;
+      excluirLoja(lid);
+    });
     c.addEventListener('click',(function(id){return function(){ST.editId=id;ir('pg-loja');}})(l.id));
     lista.appendChild(c);
   });
@@ -1299,6 +1343,7 @@ function carregarFormLoja(){
     // Nova loja
     var ftt=document.getElementById('form-tt'); if(ftt) ftt.textContent='Nova loja';
     var ed=document.getElementById('form-ed'); if(ed) ed.style.display='none';
+  var delBtn=document.getElementById('btn-loja-del'); if(delBtn) delBtn.style.display='none';
     return;
   }
 
@@ -1308,6 +1353,7 @@ function carregarFormLoja(){
 
   var ftt2=document.getElementById('form-tt'); if(ftt2) ftt2.textContent=l.nome;
   var ed=document.getElementById('form-ed'); if(ed) ed.style.display='inline-block';
+  var delBtn=document.getElementById('btn-loja-del'); if(delBtn) delBtn.style.display='flex';
 
   // Preencher campos info
   var fnome=document.getElementById('f-nome'); if(fnome) fnome.value=l.nome||'';
@@ -1345,6 +1391,20 @@ function carregarFormLoja(){
     console.log('Rows criados:', list.querySelectorAll('.chav-row').length);
   }
   updateAllSplits(); calcResumo();
+}
+
+async function excluirLoja(id){
+  // Deletar do Supabase
+  if(ST_USER){
+    await supa.from('vendas').delete().eq('loja_id', id);
+    await supa.from('chaveiros').delete().eq('loja_id', id);
+    var res = await supa.from('lojas').delete().eq('id', id);
+    if(res.error){ toast('Erro ao excluir: '+res.error.message); return; }
+  }
+  // Remover do ST.lojas
+  ST.lojas = ST.lojas.filter(function(l){ return l.id !== id; });
+  renderHome();
+  toast('Loja excluída!');
 }
 
 function renderFin(){
