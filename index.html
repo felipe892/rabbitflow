@@ -344,6 +344,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
             <span class="s-lbl">CPF (opcional)</span>
             <input class="s-inp" type="text" id="rec-cpf" placeholder="000.000.000-00">
           </div>
+          <!-- CANVAS DE ASSINATURA -->
+          <div>
+            <span class="s-lbl">Assinatura (desenhe com o dedo ou mouse)</span>
+            <div style="position:relative;margin-top:6px">
+              <canvas id="sig-canvas"
+                style="width:100%;height:130px;background:#0e0f12;border:1px solid rgba(240,120,40,0.35);border-radius:10px;display:block;touch-action:none;cursor:crosshair">
+              </canvas>
+              <button onclick="limparAssinatura()" style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:4px 10px;font-size:11px;color:#888;cursor:pointer;font-family:inherit">
+                Limpar
+              </button>
+              <div id="sig-hint" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:12px;color:#444;pointer-events:none;text-align:center;line-height:1.6">
+                ✍️<br>Assine aqui
+              </div>
+            </div>
+          </div>
+
           <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:12px;font-size:11px;color:#666;line-height:1.6">
             Ao confirmar, você declara estar ciente e de acordo com os itens listados acima, recebidos em regime de consignação de <strong style="color:#aaa">RabbitPrint</strong>.
           </div>
@@ -1117,6 +1133,8 @@ async function carregarRecibo(lojaId){
 
     loading.style.display='none';
     content.style.display='block';
+    // Inicializar canvas de assinatura após DOM atualizar
+    setTimeout(initSigCanvas, 100);
 
     // Guardar contexto para assinar
     window._reciboCtx = { lojaId: lojaId, makerId: loja.maker_id, lojaName: loja.nome,
@@ -1132,16 +1150,71 @@ async function carregarRecibo(lojaId){
   }
 }
 
+
+// ── CANVAS DE ASSINATURA ──
+var sigCanvas = null, sigCtx = null, sigDesenhando = false, sigVazia = true;
+
+function initSigCanvas(){
+  sigCanvas = document.getElementById('sig-canvas');
+  if(!sigCanvas) return;
+  // Ajustar resolução real do canvas (evita pixelado)
+  var rect = sigCanvas.getBoundingClientRect();
+  sigCanvas.width  = rect.width  * (window.devicePixelRatio||1);
+  sigCanvas.height = rect.height * (window.devicePixelRatio||1);
+  sigCtx = sigCanvas.getContext('2d');
+  sigCtx.scale(window.devicePixelRatio||1, window.devicePixelRatio||1);
+  sigCtx.strokeStyle = '#F07828';
+  sigCtx.lineWidth   = 2.5;
+  sigCtx.lineCap     = 'round';
+  sigCtx.lineJoin    = 'round';
+
+  function pos(e){
+    var r = sigCanvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - r.left, y: src.clientY - r.top };
+  }
+
+  sigCanvas.addEventListener('mousedown',  function(e){ sigDesenhando=true; var p=pos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y); });
+  sigCanvas.addEventListener('mousemove',  function(e){ if(!sigDesenhando)return; var p=pos(e); sigCtx.lineTo(p.x,p.y); sigCtx.stroke(); sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y); esconderHint(); });
+  sigCanvas.addEventListener('mouseup',    function(){ sigDesenhando=false; });
+  sigCanvas.addEventListener('mouseleave', function(){ sigDesenhando=false; });
+
+  sigCanvas.addEventListener('touchstart', function(e){ e.preventDefault(); sigDesenhando=true; var p=pos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y); }, {passive:false});
+  sigCanvas.addEventListener('touchmove',  function(e){ e.preventDefault(); if(!sigDesenhando)return; var p=pos(e); sigCtx.lineTo(p.x,p.y); sigCtx.stroke(); sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y); esconderHint(); }, {passive:false});
+  sigCanvas.addEventListener('touchend',   function(){ sigDesenhando=false; });
+}
+
+function esconderHint(){
+  sigVazia = false;
+  var h = document.getElementById('sig-hint');
+  if(h) h.style.display='none';
+}
+
+function limparAssinatura(){
+  if(!sigCtx||!sigCanvas) return;
+  sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);
+  sigVazia = true;
+  var h = document.getElementById('sig-hint');
+  if(h) h.style.display='block';
+}
+
+function getSigDataURL(){
+  if(!sigCanvas || sigVazia) return null;
+  return sigCanvas.toDataURL('image/png');
+}
+
 async function assinarRecibo(){
   var nome = document.getElementById('rec-nome').value.trim();
   var cpf  = document.getElementById('rec-cpf').value.trim();
   var err  = document.getElementById('rec-err');
   err.style.display='none';
   if(!nome){ err.textContent='Informe seu nome completo.'; err.style.display='block'; return; }
+  if(sigVazia){ err.textContent='Por favor, desenhe sua assinatura.'; err.style.display='block'; return; }
 
   var btn = document.getElementById('rec-btn-assinar');
   btn.textContent = 'Registrando...'; btn.disabled = true;
 
+  var sigImg = getSigDataURL();
   var ctx = window._reciboCtx || {};
   var res = await supa.from('recibos').insert({
     loja_id:          ctx.lojaId,
@@ -1149,6 +1222,7 @@ async function assinarRecibo(){
     nome_comerciante: nome,
     cpf_comerciante:  cpf||null,
     itens:            ctx.itens,
+    assinatura_img:   sigImg,
     ip:               null
   });
 
