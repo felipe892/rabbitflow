@@ -759,14 +759,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
         </div>
       </div>
       <div class="field"><label>Observações</label><textarea class="ftextarea" id="f-obs" placeholder="Horário de atendimento, contato preferido..."></textarea></div>
-      <!-- Botão gerar recibo -->
-      <button id="btn-gerar-recibo" onclick="gerarLinkRecibo()" style="display:none;width:100%;background:rgba(240,120,40,0.08);border:1px dashed rgba(240,120,40,0.4);border-radius:12px;padding:13px;font-size:13px;font-weight:500;color:#F07828;cursor:pointer;font-family:inherit;display:none;align-items:center;justify-content:center;gap:8px;margin-top:4px;transition:background .2s">
-        <i class="ti ti-file-check" aria-hidden="true" style="font-size:16px"></i>
-        Gerar recibo de entrega para o comerciante
-      </button>
-
       <div class="save-row">
         <button class="btn-cancel">Cancelar</button>
+        <button id="btn-gerar-recibo" onclick="gerarLinkRecibo()" style="display:none;background:rgba(240,120,40,0.08);border:1px solid rgba(240,120,40,0.35);border-radius:10px;padding:10px 16px;font-size:12px;font-weight:500;color:#F07828;cursor:pointer;font-family:inherit;align-items:center;gap:6px;white-space:nowrap;transition:background .2s">
+          <i class="ti ti-file-check" aria-hidden="true" style="font-size:14px"></i>
+          Recibo
+        </button>
         <button class="btn-save">Salvar loja</button>
       </div>
     </div>
@@ -1808,7 +1806,7 @@ function carregarFormLoja(){
   var ed=document.getElementById('form-ed'); if(ed) ed.style.display='inline-block';
   var delBtn=document.getElementById('btn-loja-del'); if(delBtn) delBtn.style.display='flex';
   var linkBtn=document.getElementById('btn-gerar-link'); if(linkBtn) linkBtn.style.display='flex';
-  var reciboBtn=document.getElementById('btn-gerar-recibo'); if(reciboBtn) reciboBtn.style.display='flex';
+  var reciboBtn=document.getElementById('btn-gerar-recibo'); if(reciboBtn) reciboBtn.style.display='inline-flex';
 
   // Preencher campos info
   var fnome=document.getElementById('f-nome'); if(fnome) fnome.value=l.nome||'';
