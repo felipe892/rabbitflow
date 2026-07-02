@@ -161,6 +161,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 @keyframes rf-up{to{opacity:1;transform:translateY(0)}}
 @keyframes rf-line{to{width:160px}}
 
+/* ── CARDS BETA (bloqueados) ── */
+.acard-beta{background:var(--bg1);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative;opacity:.75;cursor:default}
+.acard-beta:hover{border-color:rgba(255,255,255,0.12);opacity:.85}
+.acard-beta-th{height:76px;display:flex;align-items:center;justify-content:center;font-size:26px;background:var(--bg2);position:relative}
+.acard-beta-lock{position:absolute;top:7px;right:8px;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:3px 7px;font-size:10px;color:#aaa;display:flex;align-items:center;gap:4px;letter-spacing:.03em;font-weight:600}
+.acard-beta-bd{padding:12px 14px}
+.acard-beta-nm{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px;letter-spacing:.01em}
+.acard-beta-sb{font-size:11px;color:var(--text3)}
+.acard-beta-tag{display:inline-block;background:rgba(240,120,40,0.12);border:1px solid rgba(240,120,40,0.28);border-radius:5px;padding:2px 8px;font-size:9px;font-weight:700;color:var(--orange);letter-spacing:.06em;margin-bottom:5px;text-transform:uppercase}
+
 /* ── FORM LOJA ── */
 .page{display:grid;grid-template-columns:1fr 1fr;gap:0;min-height:800px}
 .left{padding:28px 24px;border-right:1px solid var(--border);overflow-y:auto}
@@ -502,6 +512,32 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
       <div class="acard" id="card-prod"><div class="acard-th">&#128230;</div><div class="acard-bd"><div class="acard-nm">Produtos</div><div class="acard-sb" id="qtd-prod">0 chaveiros</div></div></div>
       <div class="acard" id="card-fin"><div class="acard-th">&#128176;</div><div class="acard-bd"><div class="acard-nm">Financeiro</div><div class="acard-sb" id="qtd-fin">Ver contas</div></div></div>
       <div class="acard" id="card-calc"><div class="acard-th" style="background:#001a0d">&#129518;</div><div class="acard-bd"><div class="acard-nm">Calculadora</div><div class="acard-sb">Custo de impressao</div></div></div>
+
+      <!-- CARD BETA 1: Prospecção -->
+      <div class="acard-beta" onclick="mostrarBetaInfo('prospeccao')">
+        <div class="acard-beta-th" style="background:linear-gradient(135deg,#0a0a14,#10101e)">
+          &#128205;
+          <div class="acard-beta-lock">&#128274; Em breve</div>
+        </div>
+        <div class="acard-beta-bd">
+          <div class="acard-beta-tag">Beta</div>
+          <div class="acard-beta-nm">Prospectar clientes</div>
+          <div class="acard-beta-sb">Lojas na minha cidade</div>
+        </div>
+      </div>
+
+      <!-- CARD BETA 2: Top Chaveiros Brasil -->
+      <div class="acard-beta" onclick="mostrarBetaInfo('topbrasil')">
+        <div class="acard-beta-th" style="background:linear-gradient(135deg,#0f0a00,#1a1200)">
+          &#127881;
+          <div class="acard-beta-lock">&#128274; Em breve</div>
+        </div>
+        <div class="acard-beta-bd">
+          <div class="acard-beta-tag">Beta</div>
+          <div class="acard-beta-nm">Top Chaveiros Brasil</div>
+          <div class="acard-beta-sb">Os mais vendidos agora</div>
+        </div>
+      </div>
     </div>
     <div id="lojas-sec" style="display:none">
       <div class="sec-ttl">Minhas lojas - clique para editar</div>
@@ -2122,6 +2158,37 @@ function salvarPix(){
   toast('Chave Pix salva!');
 }
 
+// ── CARDS BETA ──
+var BETA_INFO = {
+  prospeccao: {
+    icon: '&#128205;',
+    titulo: 'Prospectar clientes na sua cidade',
+    desc: 'Escolha a categoria de comércio que você quer atingir — papelaria, pet shop, barbearia, distribuidora — e o app busca automaticamente estabelecimentos na sua cidade via Google Maps, trazendo nome, telefone e endereço de cada um. Você chega na loja já sabendo com quem falar.',
+    quando: 'Fase 2 do RabbitFlow — disponível em breve.'
+  },
+  topbrasil: {
+    icon: '&#127881;',
+    titulo: 'Top Chaveiros Brasil',
+    desc: 'Ranking em tempo real dos chaveiros mais vendidos na plataforma RabbitFlow. Quanto mais makers usarem o app, mais rico esse dado fica. Você vai saber exatamente o que está vendendo mais no Brasil antes de imprimir a próxima remessa.',
+    quando: 'Disponível quando a base de makers crescer. Você já está contribuindo!'
+  }
+};
+
+function mostrarBetaInfo(tipo){
+  var info = BETA_INFO[tipo];
+  if(!info) return;
+  var modal = document.getElementById('beta-modal');
+  document.getElementById('beta-modal-icon').innerHTML = info.icon;
+  document.getElementById('beta-modal-titulo').textContent = info.titulo;
+  document.getElementById('beta-modal-desc').textContent = info.desc;
+  document.getElementById('beta-modal-quando').textContent = info.quando;
+  modal.style.display = 'flex';
+}
+
+function fecharBetaModal(){
+  document.getElementById('beta-modal').style.display = 'none';
+}
+
 // ── CALCULADORA ──
 var TABELA_TEMPO=[
   {g:10,min:20},{g:15,min:28},{g:20,min:36},{g:25,min:45},
@@ -2204,5 +2271,17 @@ function renderCalc(){
 }
 
 </script>
+
+<!-- MODAL BETA -->
+<div id="beta-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9000;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px)">
+  <div style="background:#0e0f12;border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:32px 28px;max-width:420px;width:100%;position:relative">
+    <button onclick="fecharBetaModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:#666;font-size:20px;cursor:pointer;line-height:1">&#10005;</button>
+    <div style="font-size:40px;margin-bottom:16px;text-align:center" id="beta-modal-icon"></div>
+    <div style="display:inline-block;background:rgba(240,120,40,0.12);border:1px solid rgba(240,120,40,0.28);border-radius:6px;padding:3px 10px;font-size:10px;font-weight:700;color:#F07828;letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px">&#128274; Em breve</div>
+    <div style="font-size:16px;font-weight:600;color:#fff;margin-bottom:12px;line-height:1.4" id="beta-modal-titulo"></div>
+    <div style="font-size:13px;color:#9A9691;line-height:1.7;margin-bottom:18px" id="beta-modal-desc"></div>
+    <div style="background:rgba(240,120,40,0.07);border:1px solid rgba(240,120,40,0.2);border-radius:10px;padding:12px 14px;font-size:12px;color:#F07828" id="beta-modal-quando"></div>
+  </div>
+</div>
 </body>
 </html>
