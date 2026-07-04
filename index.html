@@ -1802,8 +1802,10 @@ document.querySelectorAll('.btn-save').forEach(function(btn){
       if(c) c.vendas = parseFloat(inp.value)||0;
     });
     var chaveirosDom = chaveiros.filter(function(c){ return c.nome; }).map(function(c){
+      // Só passa o id se for UUID string válido do Supabase (não ID local numérico)
+      var idValido = (c.id && typeof c.id === 'string' && c.id.length > 10) ? c.id : null;
       return {
-        id: c.id||null,
+        id: idValido,
         nome: c.nome,
         qtd: c.qtd,
         preco: c.preco,
