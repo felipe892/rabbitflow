@@ -392,6 +392,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   </div>
 </div>
 
+<!-- BLOQUEIO -->
+<div class="pg" id="pg-bloqueio">
+  <div class="setup-wrap" style="background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(240,120,40,0.07),transparent 70%)">
+    <div class="setup-box" style="text-align:center;max-width:420px">
+      <div style="width:64px;height:64px;background:rgba(240,120,40,0.12);border:1px solid rgba(240,120,40,0.3);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px">🔒</div>
+      <span style="font-size:22px;font-weight:800;color:#fff;letter-spacing:-.02em">Rabbit<span style="color:#E8852A">Flow</span></span>
+      <div style="height:1px;background:rgba(255,255,255,0.07);width:100%;margin:20px 0"></div>
+      <div style="font-size:17px;font-weight:700;color:#fff;margin-bottom:10px;line-height:1.3" id="bloqueio-titulo">Seu período gratuito encerrou</div>
+      <div style="font-size:13px;color:#888;line-height:1.7;margin-bottom:28px" id="bloqueio-desc">Você usou seus 7 dias grátis. Assine agora para continuar gerenciando suas lojas e recebimentos.</div>
+      <a href="https://buy.stripe.com/test_fZueV68Tn7qkgAj7qlbII00" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:#F07828;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;text-decoration:none;margin-bottom:12px;transition:background .2s" onmouseover="this.style.background='#FF8C38'" onmouseout="this.style.background='#F07828'">
+        Assinar por R$29,90/mês →
+      </a>
+      <div style="font-size:11px;color:#555;margin-bottom:20px">7 dias grátis · Cancele quando quiser</div>
+      <button onclick="fazerLogout()" style="background:none;border:none;color:#444;font-size:12px;cursor:pointer;font-family:inherit;transition:color .2s" onmouseover="this.style.color='#888'" onmouseout="this.style.color='#444'">Sair da conta</button>
+    </div>
+  </div>
+</div>
+
 <!-- SETUP -->
 <!-- LOGIN -->
 <div class="pg on" id="pg-login">
@@ -489,7 +507,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 
 <!-- HOME -->
 <div class="pg" id="pg-home">
-  <div class="hdr">
+  <!-- BANNER TRIAL -->
+<div id="trial-banner" style="display:none;background:linear-gradient(90deg,#0f0700,#1a0e00);border-bottom:1px solid rgba(240,120,40,0.3);padding:10px 22px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:14px">🐰</span>
+    <span style="font-size:13px;color:#F2EFE9">Você tem <strong style="color:#F07828" id="trial-dias">7 dias</strong> grátis restantes</span>
+  </div>
+  <a href="https://buy.stripe.com/test_fZueV68Tn7qkgAj7qlbII00" style="background:#F07828;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background .2s" onmouseover="this.style.background='#FF8C38'" onmouseout="this.style.background='#F07828'">
+    Assinar agora →
+  </a>
+</div>
+
+<div class="hdr">
     <div class="hdr-l">
       <div class="hdr-av" id="hdr-av">&#128039;</div>
       <div><div class="hdr-nm" id="hdr-nm">RabbitPrint</div><div class="hdr-bdg">Maker Pro</div></div>
@@ -1363,9 +1392,13 @@ checarLinkRecibo().then(function(isRecibo){
   supa.auth.getSession().then(function(res){
     if(res.data && res.data.session){
       ST_USER = res.data.session.user;
-      carregarDadosMaker().then(function(){
-        renderHome();
-        ir('pg-home');
+      verificarAssinatura(ST_USER.email).then(function(acesso){
+        if(!acesso.acesso){ mostrarBloqueio(acesso.tipo); return; }
+        if(acesso.tipo === 'trial') setTimeout(function(){ mostrarBannerTrial(acesso.diasRestantes); }, 1500);
+        carregarDadosMaker().then(function(){
+          renderHome();
+          ir('pg-home');
+        });
       });
     } else {
       ir('pg-login');
@@ -1394,6 +1427,59 @@ function showAuthTab(tab){
   document.getElementById('tab-cadastro-btn').style.color = isLogin ? '#888' : '#fff';
 }
 
+
+// ── VERIFICAÇÃO DE ASSINATURA ──
+var TRIAL_DIAS = 7;
+
+function calcularDiasRestantes(trialInicio){
+  if(!trialInicio) return TRIAL_DIAS;
+  var inicio = new Date(trialInicio);
+  var agora = new Date();
+  var diff = Math.floor((agora - inicio) / (1000*60*60*24));
+  return Math.max(0, TRIAL_DIAS - diff);
+}
+
+async function verificarAssinatura(email){
+  // 1. Verificar assinatura na tabela assinaturas
+  var res = await supa.from('assinaturas').select('status,acesso_gratuito').eq('email',email).single();
+  if(!res.error && res.data){
+    var s = res.data.status;
+    var gratis = res.data.acesso_gratuito;
+    if(gratis || s === 'active' || s === 'trialing') return {acesso:true, tipo:'assinante'};
+    if(s === 'canceled') return {acesso:false, tipo:'cancelado'};
+  }
+  // 2. Sem assinatura — verificar trial de 7 dias
+  var mkRes = await supa.from('makers').select('trial_inicio').eq('email',email).single();
+  if(mkRes.error || !mkRes.data) return {acesso:false, tipo:'sem_conta'};
+  var diasRestantes = calcularDiasRestantes(mkRes.data.trial_inicio);
+  if(diasRestantes > 0) return {acesso:true, tipo:'trial', diasRestantes:diasRestantes};
+  return {acesso:false, tipo:'trial_expirado'};
+}
+
+function mostrarBloqueio(tipo){
+  document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on');});
+  var bloqueio = document.getElementById('pg-bloqueio');
+  if(!bloqueio) return;
+  // Atualizar mensagem conforme tipo
+  var titulo = document.getElementById('bloqueio-titulo');
+  var desc = document.getElementById('bloqueio-desc');
+  if(tipo === 'cancelado'){
+    if(titulo) titulo.textContent = 'Assinatura cancelada';
+    if(desc) desc.textContent = 'Sua assinatura foi cancelada. Reative agora para continuar gerenciando suas lojas e recebimentos.';
+  } else {
+    if(titulo) titulo.textContent = 'Seu período gratuito encerrou';
+    if(desc) desc.textContent = 'Você usou seus 7 dias grátis. Assine agora para continuar gerenciando suas lojas e recebimentos.';
+  }
+  bloqueio.classList.add('on');
+}
+
+function mostrarBannerTrial(dias){
+  var banner = document.getElementById('trial-banner');
+  var diasEl = document.getElementById('trial-dias');
+  if(banner) banner.style.display = 'flex';
+  if(diasEl) diasEl.textContent = dias + (dias===1?' dia':' dias');
+}
+
 async function fazerLogin(){
   var email = document.getElementById('login-email').value.trim();
   var senha = document.getElementById('login-senha').value;
@@ -1409,6 +1495,14 @@ async function fazerLogin(){
     return;
   }
   ST_USER = res.data.user;
+  // Verificar assinatura
+  var acesso = await verificarAssinatura(ST_USER.email);
+  if(!acesso.acesso){
+    document.getElementById('btn-login').textContent='Entrar no RabbitFlow →';
+    mostrarBloqueio(acesso.tipo);
+    return;
+  }
+  if(acesso.tipo === 'trial') setTimeout(function(){ mostrarBannerTrial(acesso.diasRestantes); }, 1000);
   // Garantir que perfil do maker existe no banco
   var mkCheck = await supa.from('makers').select('id').eq('id',ST_USER.id).single();
   console.log('Maker check:', mkCheck.data ? 'existe' : 'nao existe', mkCheck.error ? mkCheck.error.message : '');
