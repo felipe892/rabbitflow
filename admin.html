@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RabbitFlow Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#04040a;--s1:#080810;--s2:#0e0e18;--s3:#14141f;
+  --b1:rgba(255,255,255,0.06);--b2:rgba(255,255,255,0.10);
+  --or:#F07828;--or2:#C4621A;--or3:rgba(240,120,40,0.12);--or4:rgba(240,120,40,0.25);
+  --tx:#F0EDE8;--tx2:#8C8884;--tx3:#3E3C3A;
+  --gn:#3FB96E;--gn2:rgba(63,185,110,0.12);--gn3:rgba(63,185,110,0.25);
+  --rd:#FF5050;--rd2:rgba(255,80,80,0.12);--rd3:rgba(255,80,80,0.25);
+  --bl:#4A90E2;--bl2:rgba(74,144,226,0.12);--bl3:rgba(74,144,226,0.25);
+  --f:'Inter',system-ui,sans-serif;
+}
+html,body{height:100%;font-family:var(--f);background:var(--bg);color:var(--tx);-webkit-font-smoothing:antialiased}
+
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(240,120,40,0.08),transparent 70%)}
+.login-box{background:var(--s1);border:1px solid var(--b2);border-radius:24px;padding:44px 40px;width:100%;max-width:380px;box-shadow:0 40px 80px rgba(0,0,0,0.7)}
+.login-logo{font-size:22px;font-weight:800;letter-spacing:-.03em;margin-bottom:6px}
+.login-logo em{color:var(--or);font-style:normal}
+.login-sub{font-size:12px;color:var(--tx3);margin-bottom:28px}
+.login-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);display:block;margin-bottom:7px}
+.login-inp{width:100%;background:var(--s3);border:1px solid var(--b1);border-radius:10px;padding:12px 14px;font-size:14px;color:var(--tx);outline:none;font-family:var(--f);transition:border-color .2s;margin-bottom:16px}
+.login-inp:focus{border-color:var(--or)}
+.login-btn{width:100%;background:var(--or);border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;font-family:var(--f);transition:background .2s}
+.login-btn:hover{background:#FF8C38}
+.login-err{font-size:12px;color:var(--rd);text-align:center;margin-top:10px;display:none}
+
+/* ── LAYOUT ── */
+#app{display:none;height:100vh;overflow:hidden}
+.layout{display:grid;grid-template-columns:220px 1fr;height:100vh}
+
+/* ── SIDEBAR ── */
+.sidebar{background:var(--s1);border-right:1px solid var(--b1);display:flex;flex-direction:column;overflow:hidden}
+.sb-logo{padding:22px 20px;border-bottom:1px solid var(--b1)}
+.sb-logo-txt{font-size:15px;font-weight:800;letter-spacing:-.03em}
+.sb-logo-txt em{color:var(--or);font-style:normal}
+.sb-logo-badge{font-size:9px;background:var(--or3);color:var(--or);border:1px solid var(--or4);border-radius:4px;padding:2px 7px;font-weight:600;letter-spacing:.05em;margin-top:4px;display:inline-block}
+.sb-nav{flex:1;padding:12px 0;overflow-y:auto}
+.sb-section{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);padding:12px 20px 6px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;font-weight:500;color:var(--tx2);cursor:pointer;transition:all .2s;border-left:2px solid transparent;user-select:none}
+.sb-item:hover{color:var(--tx);background:rgba(255,255,255,0.03)}
+.sb-item.active{color:var(--or);background:var(--or3);border-left-color:var(--or)}
+.sb-item svg{flex-shrink:0;opacity:.7}
+.sb-item.active svg{opacity:1}
+.sb-footer{padding:16px 20px;border-top:1px solid var(--b1)}
+.sb-user{font-size:11px;color:var(--tx3)}
+.sb-user strong{display:block;color:var(--tx2);font-size:12px;margin-bottom:2px}
+.sb-refresh{width:100%;background:var(--s3);border:1px solid var(--b1);border-radius:8px;padding:8px;font-size:11px;font-weight:500;color:var(--tx2);cursor:pointer;font-family:var(--f);margin-top:8px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
+.sb-refresh:hover{border-color:var(--b2);color:var(--tx)}
+
+/* ── MAIN ── */
+.main{overflow-y:auto;background:var(--bg)}
+.main-hdr{padding:24px 28px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.main-title{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.main-sub{font-size:12px;color:var(--tx3);margin-top:2px}
+.last-update{font-size:11px;color:var(--tx3);background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:5px 12px}
+
+/* ── PAGE ── */
+.page{display:none;padding:0 28px 40px}
+.page.active{display:block}
+
+/* ── KPI GRID ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.kpi{background:var(--s1);border:1px solid var(--b1);border-radius:16px;padding:20px;position:relative;overflow:hidden;transition:border-color .25s}
+.kpi:hover{border-color:var(--b2)}
+.kpi-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;flex-shrink:0}
+.kpi-icon.or{background:var(--or3);border:1px solid var(--or4)}
+.kpi-icon.gn{background:var(--gn2);border:1px solid var(--gn3)}
+.kpi-icon.bl{background:var(--bl2);border:1px solid var(--bl3)}
+.kpi-icon.rd{background:var(--rd2);border:1px solid var(--rd3)}
+.kpi-val{font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1;margin-bottom:4px}
+.kpi-val.or{color:var(--or)}.kpi-val.gn{color:var(--gn)}.kpi-val.bl{color:var(--bl)}.kpi-val.rd{color:var(--rd)}
+.kpi-lbl{font-size:11px;color:var(--tx3);font-weight:500;letter-spacing:.02em}
+
+/* ── TABLES ── */
+.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-title{font-size:13px;font-weight:600;color:var(--tx);letter-spacing:.01em}
+.section-count{font-size:11px;color:var(--tx3);background:var(--s2);border:1px solid var(--b1);border-radius:5px;padding:3px 9px}
+.table-wrap{background:var(--s1);border:1px solid var(--b1);border-radius:16px;overflow:hidden;margin-bottom:24px}
+table{width:100%;border-collapse:collapse}
+thead th{padding:11px 16px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);background:var(--s2);text-align:left;border-bottom:1px solid var(--b1)}
+tbody tr{border-bottom:1px solid var(--b1);transition:background .15s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,0.02)}
+td{padding:12px 16px;font-size:13px;color:var(--tx2)}
+td.nm{color:var(--tx);font-weight:500}
+td.mono{font-family:monospace;font-size:11px;color:var(--tx3)}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:5px;border-radius:100px;padding:3px 10px;font-size:10px;font-weight:600;letter-spacing:.04em}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%}
+.badge.active{background:var(--gn2);color:var(--gn);border:1px solid var(--gn3)}.badge.active::before{background:var(--gn)}
+.badge.trialing{background:var(--bl2);color:var(--bl);border:1px solid var(--bl3)}.badge.trialing::before{background:var(--bl)}
+.badge.canceled{background:var(--rd2);color:var(--rd);border:1px solid var(--rd3)}.badge.canceled::before{background:var(--rd)}
+.badge.beta{background:var(--or3);color:var(--or);border:1px solid var(--or4)}.badge.beta::before{background:var(--or)}
+.badge.free{background:rgba(180,140,255,0.12);color:#b48cff;border:1px solid rgba(180,140,255,0.25)}.badge.free::before{background:#b48cff}
+
+/* ── ACTION BUTTONS ── */
+.btn-sm{display:inline-flex;align-items:center;gap:5px;border-radius:7px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;border:none;font-family:var(--f);transition:all .2s;white-space:nowrap}
+.btn-gn{background:var(--gn2);color:var(--gn);border:1px solid var(--gn3)}.btn-gn:hover{background:rgba(63,185,110,.22)}
+.btn-rd{background:var(--rd2);color:var(--rd);border:1px solid var(--rd3)}.btn-rd:hover{background:rgba(255,80,80,.22)}
+.btn-or{background:var(--or3);color:var(--or);border:1px solid var(--or4)}.btn-or:hover{background:rgba(240,120,40,.22)}
+.btn-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ── FORM INLINE ── */
+.inline-form{display:flex;gap:10px;align-items:center;background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:14px 16px;margin-bottom:20px}
+.inline-form input{flex:1;background:var(--s3);border:1px solid var(--b1);border-radius:8px;padding:9px 13px;font-size:13px;color:var(--tx);outline:none;font-family:var(--f);transition:border-color .2s}
+.inline-form input:focus{border-color:var(--or)}
+.inline-form select{background:var(--s3);border:1px solid var(--b1);border-radius:8px;padding:9px 13px;font-size:13px;color:var(--tx);outline:none;font-family:var(--f)}
+.inline-form label{font-size:12px;color:var(--tx3);white-space:nowrap}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:48px 24px;color:var(--tx3);font-size:13px}
+.empty-ico{font-size:32px;margin-bottom:10px;opacity:.4}
+
+/* ── LOADING ── */
+.loading{text-align:center;padding:48px;color:var(--tx3);font-size:13px}
+.spinner{width:24px;height:24px;border:2px solid var(--b2);border-top-color:var(--or);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--s1);border:1px solid var(--gn3);border-radius:12px;padding:12px 18px;font-size:13px;color:var(--gn);z-index:9999;transform:translateY(120%);transition:transform .3s cubic-bezier(.34,1.56,.64,1);box-shadow:0 16px 40px rgba(0,0,0,.5)}
+.toast.show{transform:translateY(0)}
+.toast.err{border-color:var(--rd3);color:var(--rd)}
+
+/* ── SEARCH ── */
+.search-wrap{position:relative;margin-bottom:16px}
+.search-inp{width:100%;background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:10px 14px 10px 36px;font-size:13px;color:var(--tx);outline:none;font-family:var(--f);transition:border-color .2s}
+.search-inp:focus{border-color:var(--or)}
+.search-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--tx3)}
+
+@media(max-width:768px){
+  .layout{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Rabbit<em>Flow</em></div>
+    <div class="login-sub">Painel administrativo</div>
+    <label class="login-lbl">Senha de acesso</label>
+    <input class="login-inp" type="password" id="login-pwd" placeholder="••••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Entrar no Admin</button>
+    <div class="login-err" id="login-err">Senha incorreta.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sb-logo">
+        <div class="sb-logo-txt">Rabbit<em>Flow</em></div>
+        <div class="sb-logo-badge">ADMIN</div>
+      </div>
+      <nav class="sb-nav">
+        <div class="sb-section">Visão geral</div>
+        <div class="sb-item active" onclick="nav('dashboard')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </div>
+        <div class="sb-section">Usuários</div>
+        <div class="sb-item" onclick="nav('makers')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Makers
+        </div>
+        <div class="sb-item" onclick="nav('assinaturas')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          Assinaturas
+        </div>
+        <div class="sb-section">Dados</div>
+        <div class="sb-item" onclick="nav('lojas')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Lojas
+        </div>
+        <div class="sb-item" onclick="nav('chaveiros')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg>
+          Chaveiros
+        </div>
+      </nav>
+      <div class="sb-footer">
+        <div class="sb-user">
+          <strong>Felipe Coelho</strong>
+          Administrador
+        </div>
+        <button class="sb-refresh" onclick="loadAll()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Atualizar dados
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <div class="main-hdr">
+        <div>
+          <div class="main-title" id="page-title">Dashboard</div>
+          <div class="main-sub" id="page-sub">Visão geral da plataforma</div>
+        </div>
+        <div class="last-update" id="last-update">Carregando...</div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="kpi-icon or">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F07828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div class="kpi-val or" id="kpi-makers">-</div>
+            <div class="kpi-lbl">Makers cadastrados</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-icon gn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3FB96E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            </div>
+            <div class="kpi-val gn" id="kpi-ativas">-</div>
+            <div class="kpi-lbl">Assinaturas ativas</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-icon bl">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4A90E2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            </div>
+            <div class="kpi-val bl" id="kpi-lojas">-</div>
+            <div class="kpi-lbl">Lojas cadastradas</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-icon or">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F07828" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="kpi-val or" id="kpi-mrr">-</div>
+            <div class="kpi-lbl">MRR estimado</div>
+          </div>
+        </div>
+
+        <!-- Makers recentes -->
+        <div class="section-hdr">
+          <div class="section-title">Makers recentes</div>
+          <div class="section-count" id="cnt-makers-rec">-</div>
+        </div>
+        <div class="table-wrap">
+          <div id="tbl-makers-rec"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+        </div>
+
+        <!-- Assinaturas recentes -->
+        <div class="section-hdr">
+          <div class="section-title">Assinaturas recentes</div>
+          <div class="section-count" id="cnt-ass-rec">-</div>
+        </div>
+        <div class="table-wrap">
+          <div id="tbl-ass-rec"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+        </div>
+      </div>
+
+      <!-- MAKERS -->
+      <div class="page" id="page-makers">
+        <div class="search-wrap">
+          <svg class="search-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-inp" type="text" placeholder="Buscar maker por email ou nome..." oninput="filtrarMakers(this.value)">
+        </div>
+        <div class="section-hdr">
+          <div class="section-title">Todos os makers</div>
+          <div class="section-count" id="cnt-makers-all">-</div>
+        </div>
+        <div class="table-wrap">
+          <div id="tbl-makers-all"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+        </div>
+      </div>
+
+      <!-- ASSINATURAS -->
+      <div class="page" id="page-assinaturas">
+        <div class="inline-form">
+          <label>Dar acesso grátis:</label>
+          <input type="email" id="inp-email-free" placeholder="email@exemplo.com">
+          <button class="btn-sm btn-gn" onclick="darAcessoGratis()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Dar acesso grátis
+          </button>
+        </div>
+        <div class="section-hdr">
+          <div class="section-title">Todas as assinaturas</div>
+          <div class="section-count" id="cnt-ass-all">-</div>
+        </div>
+        <div class="table-wrap">
+          <div id="tbl-ass-all"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+        </div>
+      </div>
+
+      <!-- LOJAS -->
+      <div class="page" id="page-lojas">
+        <div class="search-wrap">
+          <svg class="search-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-inp" type="text" placeholder="Buscar loja por nome..." oninput="filtrarLojas(this.value)">
+        </div>
+        <div class="section-hdr">
+          <div class="section-title">Todas as lojas</div>
+          <div class="section-count" id="cnt-lojas-all">-</div>
+        </div>
+        <div class="table-wrap">
+          <div id="tbl-lojas-all"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+        </div>
+      </div>
+
+      <!-- CHAVEIROS -->
+      <div class="page" id="page-chaveiros">
+        <div class="section-hdr">
+          <div class="section-title">Todos os chaveiros</div>
+          <div class="section-count" id="cnt-chav-all">-</div>
+        </div>
+        <div class="table-wrap">
+          <div id="tbl-chav-all"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SENHA = 'felipe300812';
+const SUPA_URL = 'https://jcfkjpfcvrsmhljgwrkv.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpjZmtqcGZjdnJzbWhsamd3cmt2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjczODI1MCwiZXhwIjoyMDk4MzE0MjUwfQ.UgTQ1q5Qb9yxamVsWAWwmpIaEa6FBCEdQqC4yW3NJDg';
+
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// Data global
+let DATA = { makers:[], lojas:[], chaveiros:[], assinaturas:[] };
+
+// ── LOGIN ──
+function doLogin(){
+  var pwd = document.getElementById('login-pwd').value;
+  if(pwd === SENHA){
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadAll();
+  } else {
+    document.getElementById('login-err').style.display = 'block';
+    document.getElementById('login-pwd').value = '';
+    document.getElementById('login-pwd').focus();
+  }
+}
+
+// ── TOAST ──
+var toastTimer;
+function toast(msg, err){
+  var t = document.getElementById('toast');
+  t.textContent = (err ? '✗ ' : '✓ ') + msg;
+  t.className = 'toast show' + (err ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+// ── NAV ──
+var currentPage = 'dashboard';
+var pageTitles = {
+  dashboard: ['Dashboard','Visão geral da plataforma'],
+  makers: ['Makers','Todos os usuários cadastrados'],
+  assinaturas: ['Assinaturas','Gerenciar acessos e planos'],
+  lojas: ['Lojas','Todas as lojas da plataforma'],
+  chaveiros: ['Chaveiros','Todos os produtos cadastrados']
+};
+
+function nav(page){
+  currentPage = page;
+  document.querySelectorAll('.sb-item').forEach(function(el){ el.classList.remove('active'); });
+  event.currentTarget.classList.add('active');
+  document.querySelectorAll('.page').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById('page-'+page).classList.add('active');
+  var t = pageTitles[page];
+  document.getElementById('page-title').textContent = t[0];
+  document.getElementById('page-sub').textContent = t[1];
+  renderPage(page);
+}
+
+// ── LOAD ALL ──
+async function loadAll(){
+  document.getElementById('last-update').textContent = 'Atualizando...';
+  try {
+    var [m, l, c, a] = await Promise.all([
+      supa.from('makers').select('*').order('criado_em', {ascending:false}),
+      supa.from('lojas').select('*').order('criado_em', {ascending:false}),
+      supa.from('chaveiros').select('*').order('criado_em', {ascending:false}),
+      supa.from('assinaturas').select('*').order('criado_em', {ascending:false})
+    ]);
+    DATA.makers = m.data || [];
+    DATA.lojas = l.data || [];
+    DATA.chaveiros = c.data || [];
+    DATA.assinaturas = a.data || [];
+    var now = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('last-update').textContent = 'Atualizado às ' + now;
+    renderAll();
+  } catch(e) {
+    toast('Erro ao carregar dados', true);
+  }
+}
+
+function renderAll(){
+  renderKPIs();
+  renderPage(currentPage);
+}
+
+// ── KPIs ──
+function renderKPIs(){
+  var ativas = DATA.assinaturas.filter(function(a){ return a.status==='active'||a.status==='trialing'; }).length;
+  var mrr = ativas * 29.90;
+  animCount('kpi-makers', DATA.makers.length);
+  animCount('kpi-ativas', ativas);
+  animCount('kpi-lojas', DATA.lojas.length);
+  document.getElementById('kpi-mrr').textContent = 'R$' + mrr.toFixed(0);
+}
+
+function animCount(id, target){
+  var el = document.getElementById(id);
+  var curr = 0;
+  var step = Math.max(1, Math.ceil(target/30));
+  var timer = setInterval(function(){
+    curr = Math.min(curr+step, target);
+    el.textContent = curr;
+    if(curr >= target) clearInterval(timer);
+  }, 25);
+}
+
+// ── RENDER PAGE ──
+function renderPage(page){
+  if(page==='dashboard') renderDashboard();
+  else if(page==='makers') renderMakers(DATA.makers);
+  else if(page==='assinaturas') renderAssinaturas(DATA.assinaturas);
+  else if(page==='lojas') renderLojas(DATA.lojas);
+  else if(page==='chaveiros') renderChaveiros(DATA.chaveiros);
+}
+
+// ── HELPERS ──
+function getStatus(email){
+  var a = DATA.assinaturas.find(function(x){ return x.email===email; });
+  if(!a) return null;
+  return a;
+}
+function statusBadge(status){
+  var labels = {active:'Ativo',trialing:'Trial',canceled:'Cancelado',beta:'Beta',gratuito:'Gratuito'};
+  var s = status||'canceled';
+  return '<span class="badge '+s+'">'+(labels[s]||s)+'</span>';
+}
+function dt(str){ return str ? new Date(str).toLocaleDateString('pt-BR') : '—'; }
+function trunc(str,n){ return str && str.length>n ? str.slice(0,n)+'...' : (str||'—'); }
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  // Makers recentes
+  var recMakers = DATA.makers.slice(0,8);
+  document.getElementById('cnt-makers-rec').textContent = DATA.makers.length + ' total';
+  if(!recMakers.length){
+    document.getElementById('tbl-makers-rec').innerHTML = '<div class="empty"><div class="empty-ico">👥</div>Nenhum maker cadastrado ainda.</div>';
+  } else {
+    var rows = recMakers.map(function(m){
+      var ass = getStatus(m.email);
+      var nLojas = DATA.lojas.filter(function(l){ return l.maker_id===m.id; }).length;
+      return '<tr><td class="nm">'+trunc(m.nome||'—',24)+'</td><td class="mono">'+m.email+'</td><td>'+nLojas+' lojas</td><td>'+(ass?statusBadge(ass.status):statusBadge('canceled'))+'</td><td>'+dt(m.criado_em)+'</td></tr>';
+    }).join('');
+    document.getElementById('tbl-makers-rec').innerHTML = '<table><thead><tr><th>Nome</th><th>Email</th><th>Lojas</th><th>Status</th><th>Cadastro</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  }
+
+  // Assinaturas recentes
+  var recAss = DATA.assinaturas.slice(0,8);
+  document.getElementById('cnt-ass-rec').textContent = DATA.assinaturas.length + ' total';
+  if(!recAss.length){
+    document.getElementById('tbl-ass-rec').innerHTML = '<div class="empty"><div class="empty-ico">💳</div>Nenhuma assinatura ainda.</div>';
+  } else {
+    var rows2 = recAss.map(function(a){
+      return '<tr><td class="mono">'+a.email+'</td><td>'+statusBadge(a.status)+'</td><td>'+(a.plano||'—')+'</td><td>'+dt(a.criado_em)+'</td></tr>';
+    }).join('');
+    document.getElementById('tbl-ass-rec').innerHTML = '<table><thead><tr><th>Email</th><th>Status</th><th>Plano</th><th>Data</th></tr></thead><tbody>'+rows2+'</tbody></table>';
+  }
+}
+
+// ── MAKERS ──
+function renderMakers(makers){
+  document.getElementById('cnt-makers-all').textContent = makers.length + ' makers';
+  if(!makers.length){
+    document.getElementById('tbl-makers-all').innerHTML = '<div class="empty"><div class="empty-ico">👥</div>Nenhum maker encontrado.</div>';
+    return;
+  }
+  var rows = makers.map(function(m){
+    var ass = getStatus(m.email);
+    var nLojas = DATA.lojas.filter(function(l){ return l.maker_id===m.id; }).length;
+    var nChav = DATA.chaveiros.filter(function(c){ return c.maker_id===m.id; }).length;
+    var status = ass ? ass.status : 'canceled';
+    return '<tr>'+
+      '<td class="nm">'+trunc(m.nome||'—',20)+'</td>'+
+      '<td class="mono">'+m.email+'</td>'+
+      '<td style="text-align:center">'+nLojas+'</td>'+
+      '<td style="text-align:center">'+nChav+'</td>'+
+      '<td>'+statusBadge(status)+'</td>'+
+      '<td>'+dt(m.criado_em)+'</td>'+
+      '<td><div class="btn-actions">'+
+        '<button class="btn-sm btn-gn" onclick="darAcessoGratisMaker(\''+m.email+'\')">Acesso grátis</button>'+
+        '<button class="btn-sm btn-rd" onclick="revogarAcesso(\''+m.email+'\')">Revogar</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+  document.getElementById('tbl-makers-all').innerHTML = '<table><thead><tr><th>Nome</th><th>Email</th><th style="text-align:center">Lojas</th><th style="text-align:center">Chaveiros</th><th>Status</th><th>Cadastro</th><th>Ações</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+function filtrarMakers(q){
+  var r = DATA.makers.filter(function(m){
+    return (m.email||'').toLowerCase().includes(q.toLowerCase()) ||
+           (m.nome||'').toLowerCase().includes(q.toLowerCase());
+  });
+  renderMakers(r);
+}
+
+// ── ASSINATURAS ──
+function renderAssinaturas(ass){
+  document.getElementById('cnt-ass-all').textContent = ass.length + ' registros';
+  if(!ass.length){
+    document.getElementById('tbl-ass-all').innerHTML = '<div class="empty"><div class="empty-ico">💳</div>Nenhuma assinatura ainda.</div>';
+    return;
+  }
+  var rows = ass.map(function(a){
+    return '<tr>'+
+      '<td class="mono">'+a.email+'</td>'+
+      '<td>'+statusBadge(a.status)+'</td>'+
+      '<td>'+(a.plano||'—')+'</td>'+
+      '<td class="mono">'+trunc(a.stripe_customer_id||'—',16)+'</td>'+
+      '<td>'+dt(a.atualizado_em)+'</td>'+
+      '<td><div class="btn-actions">'+
+        '<button class="btn-sm btn-or" onclick="alterarStatus(\''+a.email+'\',\'active\')">Ativar</button>'+
+        '<button class="btn-sm btn-rd" onclick="alterarStatus(\''+a.email+'\',\'canceled\')">Cancelar</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+  document.getElementById('tbl-ass-all').innerHTML = '<table><thead><tr><th>Email</th><th>Status</th><th>Plano</th><th>Customer ID</th><th>Atualizado</th><th>Ações</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+// ── LOJAS ──
+function renderLojas(lojas){
+  document.getElementById('cnt-lojas-all').textContent = lojas.length + ' lojas';
+  if(!lojas.length){
+    document.getElementById('tbl-lojas-all').innerHTML = '<div class="empty"><div class="empty-ico">🏪</div>Nenhuma loja cadastrada.</div>';
+    return;
+  }
+  var rows = lojas.map(function(l){
+    var maker = DATA.makers.find(function(m){ return m.id===l.maker_id; });
+    var nChav = DATA.chaveiros.filter(function(c){ return c.loja_id===l.id; }).length;
+    return '<tr>'+
+      '<td class="nm">'+trunc(l.nome||'—',24)+'</td>'+
+      '<td class="mono">'+((maker&&maker.email)||'—')+'</td>'+
+      '<td>'+(l.cat||'—')+'</td>'+
+      '<td style="text-align:center">'+nChav+'</td>'+
+      '<td>'+(l.pct||30)+'%</td>'+
+      '<td>'+dt(l.criado_em)+'</td>'+
+    '</tr>';
+  }).join('');
+  document.getElementById('tbl-lojas-all').innerHTML = '<table><thead><tr><th>Nome</th><th>Maker</th><th>Categoria</th><th style="text-align:center">Chaveiros</th><th>Comissão</th><th>Cadastro</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+function filtrarLojas(q){
+  var r = DATA.lojas.filter(function(l){ return (l.nome||'').toLowerCase().includes(q.toLowerCase()); });
+  renderLojas(r);
+}
+
+// ── CHAVEIROS ──
+function renderChaveiros(chaveiros){
+  document.getElementById('cnt-chav-all').textContent = chaveiros.length + ' chaveiros';
+  if(!chaveiros.length){
+    document.getElementById('tbl-chav-all').innerHTML = '<div class="empty"><div class="empty-ico">🔑</div>Nenhum chaveiro cadastrado.</div>';
+    return;
+  }
+  var rows = chaveiros.map(function(c){
+    var loja = DATA.lojas.find(function(l){ return l.id===c.loja_id; });
+    var maker = DATA.makers.find(function(m){ return m.id===c.maker_id; });
+    return '<tr>'+
+      '<td class="nm">'+trunc(c.nome||'—',24)+'</td>'+
+      '<td>'+((loja&&loja.nome)||'—')+'</td>'+
+      '<td class="mono">'+((maker&&maker.email)||'—')+'</td>'+
+      '<td style="text-align:center">'+(c.qtd_inicial||0)+'</td>'+
+      '<td>R$ '+parseFloat(c.preco||0).toFixed(2).replace('.',',')+'</td>'+
+      '<td>'+dt(c.criado_em)+'</td>'+
+    '</tr>';
+  }).join('');
+  document.getElementById('tbl-chav-all').innerHTML = '<table><thead><tr><th>Nome</th><th>Loja</th><th>Maker</th><th style="text-align:center">Qtd</th><th>Preço</th><th>Cadastro</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+// ── AÇÕES ──
+async function darAcessoGratis(){
+  var email = document.getElementById('inp-email-free').value.trim();
+  if(!email){ toast('Digite um email válido', true); return; }
+  await darAcessoGratisMaker(email);
+  document.getElementById('inp-email-free').value = '';
+}
+
+async function darAcessoGratisMaker(email){
+  if(!confirm('Dar acesso gratuito para '+email+'?')) return;
+  var { error } = await supa.from('assinaturas').upsert({
+    email: email,
+    status: 'active',
+    plano: 'gratuito',
+    acesso_gratuito: true,
+    atualizado_em: new Date().toISOString()
+  }, { onConflict: 'email' });
+  if(error){ toast('Erro: '+error.message, true); }
+  else { toast('Acesso gratuito liberado para '+email); await loadAll(); }
+}
+
+async function revogarAcesso(email){
+  if(!confirm('Revogar acesso de '+email+'?')) return;
+  var { error } = await supa.from('assinaturas').upsert({
+    email: email,
+    status: 'canceled',
+    atualizado_em: new Date().toISOString()
+  }, { onConflict: 'email' });
+  if(error){ toast('Erro: '+error.message, true); }
+  else { toast('Acesso revogado para '+email); await loadAll(); }
+}
+
+async function alterarStatus(email, status){
+  var labels = { active:'ativar', canceled:'cancelar' };
+  if(!confirm('Deseja '+labels[status]+' a assinatura de '+email+'?')) return;
+  var { error } = await supa.from('assinaturas').upsert({
+    email: email,
+    status: status,
+    atualizado_em: new Date().toISOString()
+  }, { onConflict: 'email' });
+  if(error){ toast('Erro: '+error.message, true); }
+  else { toast('Status alterado para '+status); await loadAll(); }
+}
+</script>
+</body>
+</html>
