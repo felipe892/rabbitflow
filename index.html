@@ -532,7 +532,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   <div class="home-pad">
     <div class="w-row">
       <div class="w-av" id="w-av">&#128039;</div>
-      <div><div class="w-nm" id="w-nm">Ola, Felipe!</div><div class="w-sb" id="w-sb">RabbitPrint - Tudo sob controle</div></div>
+      <div><div class="w-nm" id="w-nm">Ola!</div><div class="w-sb" id="w-sb">Tudo sob controle</div></div>
     </div>
     <div class="sec-ttl">O que voce quer fazer?</div>
     <div class="grid6">
@@ -1695,7 +1695,7 @@ async function salvarLojaSupabase(dados){
           preco: parseFloat(c.preco)||0,
           reposicoes: c.reposicoes||[]
         };
-        if(c.id && typeof c.id === 'string'){
+        if(c.id && typeof c.id === 'string' && c.id.length > 10){
           // UPDATE — chaveiro já existe, preserva vendas vinculadas
           var upc = await supa.from('chaveiros').update(payload).eq('id', c.id);
           if(upc.error){
@@ -1704,7 +1704,7 @@ async function salvarLojaSupabase(dados){
           }
           idsExistentesNoForm.push(c.id);
         } else {
-          // INSERT — chaveiro novo
+          // INSERT — chaveiro novo (id null ou id local numérico)
           var ci = await supa.from('chaveiros').insert(payload).select('id').single();
           if(ci.error){
             console.error('Erro chaveiro '+c.nome+':', ci.error.message, ci.error.details);
@@ -1938,6 +1938,11 @@ document.getElementById('card-lojas').addEventListener('click',function(){
 
 function renderHome(){
   syncHdr();
+  // Atualizar saudação com dados reais do maker
+  var wnm = document.getElementById('w-nm');
+  var wsb = document.getElementById('w-sb');
+  if(wnm) wnm.textContent = 'Ola, '+(ST.makerPessoa||ST.makerNome||'Maker')+'!';
+  if(wsb) wsb.textContent = (ST.makerNome||'RabbitPrint')+' - Tudo sob controle';
   var q=ST.lojas.length;
   document.getElementById('qtd-lojas').textContent=q+' loja'+(q!==1?'s cadastradas':' cadastrada');
   var pend=ST.lojas.filter(function(l){return !l.pago;}).length;
